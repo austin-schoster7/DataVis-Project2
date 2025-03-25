@@ -1,20 +1,31 @@
-#my-map {
-  width: 100%;
-  height: 500px;
+body {
+  margin: 0;
+  font-family: sans-serif;
 }
 
+/* Basic tooltip styling */
 #tooltip {
-  position: absolute;
-  opacity: 0;
-  background: #fff;
-  box-shadow: 2px 2px 3px 0px rgb(92 92 92 / 0.5);
-  border: 1px solid #ddd;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 5px;
+  font-size: 0.9rem;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+  z-index: 1000;
 }
-.tooltip-label {
-  font-weight: 500;
-  font-size: 10px;
-  color: #888;
+
+#visualizations {
+  display: flex;
+}
+
+#my-map {
+  width: 60%;
+  height: 600px;
+}
+
+#timeline {
+  width: 40%;
+  height: 600px;
+  position: relative;
 }

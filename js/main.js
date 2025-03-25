@@ -1,15 +1,22 @@
-d3.csv('data/2024-2025.csv')  //**** TO DO  switch this to loading the quakes 'data/2024-2025.csv'
-.then(data => {
-    console.log("number of items: " + data.length);
-
-    data.forEach(d => {  //convert from string to number
-      d.latitude = +d.latitude; 
-      d.longitude = +d.longitude;  
+d3.csv('data/04-05.csv')
+  .then(data => {
+    data.forEach(d => {
+      d.latitude = +d.latitude;
+      d.longitude = +d.longitude;
+      d.mag = +d.mag;
+      d.depth = +d.depth;
+      d.time = new Date(d.time);
     });
 
-    // Initialize chart and then show it
-    leafletMap = new LeafletMap({ parentElement: '#my-map'}, data);
+    const leafletMap = new LeafletMap({ parentElement: '#my-map' }, data);
+    // Attach button event
+    d3.select('#toggle-map-btn').on('click', () => {
+      leafletMap.toggleBaseMap();
+    });
 
+    const timeline = new Timeline({ parentElement: '#timeline' }, data);
 
+    // Create magnitude chart
+    const magChart = new MagnitudeChart({ parentElement: '#mag-chart' }, data);
   })
-  .catch(error => console.error(error));
+  .catch(err => console.error(err));

@@ -1,23 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Interactive map with Leaflet</title>
-    <link rel="icon" href="data:;base64,iVBORwOKGO=" />
-    <link rel="stylesheet" href="css/leaflet.css">
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <title>Earthquake Visualization</title>
+  <link rel="stylesheet" href="css/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
+  <div id="visualizations">
     <div id="my-map"></div>
-    
-    <script src="js/d3.v6.min.js"></script>
-    <script src="js/leaflet.js"></script>
+    <div id="timeline"></div>
+    <div id="mag-chart"></div>
+  </div>
 
+  <div id="tooltip" style="position: absolute; pointer-events: none; opacity: 0;"></div>
 
-    <script src="js/main.js"></script>
-    <script src="js/leafletMap.js"></script>
-
-    <div id="tooltip"></div>
-
-
+  <script src="js/d3.v6.min.js"></script>
+  <script src="js/leaflet.js"></script>
+  <script src="js/leafletMap.js"></script>
+  <script src="js/timeline.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/magnitudeChart.js"></script>
 </body>
 </html>
