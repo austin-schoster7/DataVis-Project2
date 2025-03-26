@@ -85,7 +85,8 @@ class LeafletMap {
             .html(`
               <b>Location:</b> ${d.place || 'Unknown'}<br>
               <b>Magnitude:</b> ${d.mag}<br>
-              <b>Depth:</b> ${d.depth} km
+              <b>Depth:</b> ${d.depth} km <br>
+              <b>Date:</b> ${d.time.toLocaleDateString()}<br>
             `);
         })
         .on('mousemove', (event) => {
@@ -110,6 +111,40 @@ class LeafletMap {
 
   updateVis() {
     const vis = this;
+
+    // (Optional) Re-compute color or radius scale domains if data changes drastically
+    const magExtent = d3.extent(vis.data, d => d.mag);
+    vis.colorScale.domain(magExtent);
+    vis.radiusScale.domain(magExtent);
+
+    // BIND NEW DATA
+    vis.circles = vis.svg.selectAll('circle')
+      .data(vis.data)
+      .join('circle')
+        .attr('stroke', 'black')
+        .attr('fill', d => vis.colorScale(d.mag))
+        .attr('r', d => vis.radiusScale(d.mag))
+        // re-attach tooltip handlers if needed
+        .on('mouseover', (event, d) => {
+          d3.select('#tooltip')
+            .style('opacity', 1)
+            .html(`
+              <b>Location:</b> ${d.place || 'Unknown'}<br>
+              <b>Magnitude:</b> ${d.mag}<br>
+              <b>Depth:</b> ${d.depth} km
+            `);
+        })
+        .on('mousemove', (event) => {
+          d3.select('#tooltip')
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY + 10) + 'px');
+        })
+        .on('mouseleave', () => {
+          d3.select('#tooltip')
+            .style('opacity', 0);
+        });
+
+    // UPDATE POSITIONS
     vis.circles
       .attr('cx', d => vis.project(d).x)
       .attr('cy', d => vis.project(d).y);

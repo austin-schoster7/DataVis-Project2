@@ -9,6 +9,8 @@ class MagnitudeChart {
         ..._config
       };
       this.data = _data;
+      // default attribute is 'mag'
+      this.currentAttribute = 'mag';
       this.initVis();
     }
   
@@ -23,16 +25,16 @@ class MagnitudeChart {
         .append('g')
         .attr('transform', `translate(${vis.config.margin.left}, ${vis.config.margin.top})`);
   
-      // xScale for magnitude
-      const magExtent = d3.extent(vis.data, d => d.mag);
+      // xScale based on current attribute
+      const attrExtent = d3.extent(vis.data, d => d[vis.currentAttribute]);
       vis.xScale = d3.scaleLinear()
-        .domain(magExtent)
+        .domain(attrExtent)
         .range([0, vis.width])
         .nice();
   
-      // create bins
+      // create histogram
       vis.histogram = d3.histogram()
-        .value(d => d.mag)
+        .value(d => d[vis.currentAttribute])
         .domain(vis.xScale.domain())
         .thresholds(vis.xScale.ticks(vis.config.bins));
   
@@ -53,9 +55,15 @@ class MagnitudeChart {
   
     updateVis() {
       const vis = this;
-      // bin the data
       const bins = vis.histogram(vis.data);
       vis.yScale.domain([0, d3.max(bins, d => d.length)]);
+  
+      // We'll create a simple lookup for attribute labels
+      const attributeLabels = {
+        mag: 'Magnitude',
+        depth: 'Depth',
+      };
+      const currentLabel = attributeLabels[vis.currentAttribute] || 'Value';
   
       // draw rects
       vis.bars = vis.svg.selectAll('.bar')
@@ -66,11 +74,66 @@ class MagnitudeChart {
           .attr('width', d => Math.max(0, vis.xScale(d.x1) - vis.xScale(d.x0) - 1))
           .attr('y', d => vis.yScale(d.length))
           .attr('height', d => vis.height - vis.yScale(d.length))
-          .attr('fill', 'teal');
+          .attr('fill', 'teal')
+          // Tooltip handlers:
+          .on('mouseover', (event, d) => {
+            d3.select('#tooltip')
+              .style('opacity', 1)
+              .html(`
+                <b>${currentLabel} range:</b> ${d.x0.toFixed(2)} - ${d.x1.toFixed(2)}<br>
+                <b>Count:</b> ${d.length}
+              `);
+          })
+          .on('mousemove', (event) => {
+            d3.select('#tooltip')
+              .style('left', (event.pageX + 10) + 'px')
+              .style('top', (event.pageY + 10) + 'px');
+          })
+          .on('mouseleave', () => {
+            d3.select('#tooltip')
+              .style('opacity', 0);
+          });
   
-      // axes
+      // Update axes
       vis.xAxisGroup.call(vis.xAxis);
       vis.yAxisGroup.call(vis.yAxis);
     }
+  
+    // Method to update the chart when a new attribute is selected
+    updateChart(newAttribute) {
+        const vis = this;
+        vis.currentAttribute = newAttribute;
+      
+        if (newAttribute === 'depth') {
+          // Clamp domain to ignore the top 1% outliers
+          const sortedDepths = vis.data.map(d => d.depth).sort(d3.ascending);
+          const cutoff = d3.quantile(sortedDepths, 0.99);
+          vis.xScale.domain([0, cutoff]).nice();
+      
+          // Or just do a normal extent if you prefer:
+          // const extent = d3.extent(vis.data, d => d.depth);
+          // vis.xScale.domain(extent).nice();
+      
+          // Use more bins
+          vis.histogram
+            .value(d => d.depth)
+            .domain(vis.xScale.domain())
+            .thresholds(vis.xScale.ticks(30)); // 30 bins
+        } else {
+          // default approach for magnitude, duration, etc.
+          const attrExtent = d3.extent(vis.data, d => d[newAttribute]);
+          vis.xScale.domain(attrExtent).nice();
+          vis.histogram
+            .value(d => d[newAttribute])
+            .domain(vis.xScale.domain())
+            .thresholds(vis.xScale.ticks(vis.config.bins));
+        }
+      
+        // Update the x-axis
+        vis.xAxis.scale(vis.xScale);
+        // Redraw
+        vis.updateVis();
+      }
+      
   }
   
