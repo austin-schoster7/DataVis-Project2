@@ -7,39 +7,46 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
-  <div id="controls">
-    <label for="year-slider">Year:</label>
-    <input type="range" id="year-slider" min="2004" max="2024" step="1" value="2004">
-    
-    <button id="play-button">Play</button>
-    <button id="pause-button" disabled>Pause</button>
-    <label for="animation-speed">Speed (seconds per year):</label>
-    <input type="number" id="animation-speed" value="1" step="0.5" min="0.1">
-  </div>
-
-  <div id="visualizations">
-    <div id="my-map"></div>
-    <div id="timeline"></div>
-    
-    <!-- New container for chart and dropdown -->
-    <div id="mag-chart-container">
-      <label for="attribute-dropdown">Select attribute:</label>
-      <select id="attribute-dropdown">
-        <option value="mag" selected>Magnitude</option>
-        <option value="depth">Depth</option>
-      </select>
-      <div id="mag-chart"></div>
+    <div id="controls">
+      <label for="year-slider">Year:</label>
+      <input type="range" id="year-slider" min="2004" max="2024" step="1" value="2004">
+  
+      <button id="play-button">Play</button>
+      <button id="pause-button" disabled>Pause</button>
+  
+      <label for="animation-speed">Speed (seconds per year):</label>
+      <input type="number" id="animation-speed" value="1" step="0.5" min="0.1">
     </div>
-  </div>
-
-  <div id="tooltip" style="position: absolute; pointer-events: none; opacity: 0;"></div>
-
-  <script src="js/d3.v6.min.js"></script>
-  <script src="js/leaflet.js"></script>
-  <script src="js/leafletMap.js"></script>
-  <script src="js/timeline.js"></script>
-  <script src="js/main.js"></script>
-  <script src="js/magnitudeChart.js"></script>
+  
+    <div id="visualizations">
+      <!-- Left: Large map container -->
+      <div id="map-container">
+        <div id="my-map"></div>
+      </div>
+  
+      <!-- Right: Two stacked visualizations: timeline (top), bar chart (bottom) -->
+      <div id="side-container">
+        <div id="timeline"></div>
+  
+        <div id="mag-chart-container">
+          <label for="attribute-dropdown">Select attribute:</label>
+          <select id="attribute-dropdown">
+            <option value="mag" selected>Magnitude</option>
+            <option value="depth">Depth</option>
+          </select>
+          <div id="mag-chart"></div>
+        </div>
+      </div>
+    </div>
+  
+    <div id="tooltip"></div>
+  
+    <script src="js/d3.v6.min.js"></script>
+    <script src="js/leaflet.js"></script>
+    <script src="js/leafletMap.js"></script>
+    <script src="js/timeline.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/magnitudeChart.js"></script>
 </body>
+  
 </html>

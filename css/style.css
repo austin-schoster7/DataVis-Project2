@@ -1,11 +1,92 @@
-body {
-  margin: 0;
+/* Top controls bar */
+#controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background-color: #eeeeee;
+  border-bottom: 1px solid #ccc;
   font-family: sans-serif;
 }
 
-/* Basic tooltip styling */
+/* Container for all visualizations: left map, right side stacked */
+#visualizations {
+  display: flex;
+  flex-direction: row; /* row for map + side container */
+  gap: 10px;
+  padding: 10px 20px;
+  background-color: #f7f7f7;
+  font-family: sans-serif;
+  height: 750px; /* total height for the row */
+  box-sizing: border-box;
+}
+
+/* Left map container takes ~70% width, full height */
+#map-container {
+  flex: 70;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  position: relative;
+  height: 100%;
+  display: flex; /* so #my-map can fill it */
+}
+
+/* The actual Leaflet map: fill its parent */
+#my-map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Right side container: stacked timeline + bar chart */
+#side-container {
+  flex: 30; 
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+/* Timeline: top half of side container */
+#timeline {
+  flex: 1; /* half the container (along with the bar chart) */
+  background-color: #fff;
+  border: 1px solid #ccc;
+  position: relative;
+}
+
+/* Bar chart container: bottom half of side container */
+#mag-chart-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  position: relative;
+  padding: 10px;
+}
+
+/* The actual bar chart (SVG) inside the container */
+#mag-chart {
+  flex: 1;
+  position: relative;
+  background-color: #fff;
+}
+
+/* Style the dropdown */
+#mag-chart-container label {
+  font-weight: bold;
+  margin-right: 5px;
+}
+#attribute-dropdown {
+  margin-bottom: 10px;
+  padding: 5px;
+  font-size: 0.9rem;
+}
+
+/* Tooltip styling */
 #tooltip {
-  background: rgba(255, 255, 255, 0.9);
+  position: absolute;
+  background: rgba(255, 255, 255, 0.95);
   border: 1px solid #333;
   border-radius: 3px;
   padding: 5px;
@@ -13,19 +94,6 @@ body {
   pointer-events: none;
   transition: opacity 0.1s ease;
   z-index: 1000;
-}
-
-#visualizations {
-  display: flex;
-}
-
-#my-map {
-  width: 60%;
-  height: 600px;
-}
-
-#timeline {
-  width: 40%;
-  height: 600px;
-  position: relative;
+  opacity: 0; /* start hidden */
+  font-family: sans-serif;
 }
