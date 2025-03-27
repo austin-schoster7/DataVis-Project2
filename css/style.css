@@ -118,3 +118,21 @@
 #header-info p {
   margin: 0.5rem 0;
 }
+
+.info.legend {
+  background: white;
+  padding: 6px 8px;
+  font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  line-height: 18px;
+}
+
+.info.legend i {
+  width: 14px;
+  height: 14px;
+  float: left;
+  margin-right: 6px;
+  opacity: 0.8;
+  border: 1px solid #999;
+}
