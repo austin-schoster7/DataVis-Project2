@@ -24,17 +24,17 @@ const yearToFile = {
 
 // Visualization instances
 let leafletMap, timeline, magChart;
-let currentWeek = 0;
+let currentIndex = 0;
 let playInterval = null;
 let allData = {};
-let weeksData = [];
+let timeChunks = []; // Will hold weeks, months, or custom ranges
 let isDataLoaded = false;
-let selectedAttribute = 'mag'; // Default attribute
+let selectedAttribute = 'mag';
+let currentMode = 'weekly'; // Default mode
 
 // Main initialization function
 async function initialize() {
   try {
-    // Show loading state
     d3.select('#loading-message').style('display', 'block');
 
     // Load all years data
@@ -43,7 +43,6 @@ async function initialize() {
       loadPromises.push(loadDataForYear(year));
     }
 
-    // Wait for all files to load
     const allYearData = await Promise.all(loadPromises);
 
     // Store loaded data
@@ -51,20 +50,19 @@ async function initialize() {
       allData[2004 + index] = data;
     });
 
-    // Process into weekly chunks
-    processAllDataIntoWeeks();
+    // Process into time chunks based on default mode
+    processTimeChunks(currentMode);
     isDataLoaded = true;
 
-    // Initialize visualizations with first week's data
-    leafletMap = new LeafletMap({ parentElement: '#my-map' }, weeksData[currentWeek].data);
-    timeline = new Timeline({ parentElement: '#timeline' }, weeksData[currentWeek].data);
-    magChart = new MagnitudeChart({ parentElement: '#mag-chart' }, weeksData[currentWeek].data);
+    // Initialize visualizations
+    leafletMap = new LeafletMap({ parentElement: '#my-map' }, timeChunks[currentIndex].data);
+    timeline = new Timeline({ parentElement: '#timeline' }, timeChunks[currentIndex].data);
+    magChart = new MagnitudeChart({ parentElement: '#mag-chart' }, timeChunks[currentIndex].data);
 
     // Set up UI controls
     setupUI();
     updateDateDisplay();
 
-    // Hide loading message
     d3.select('#loading-message').style('display', 'none');
   } catch (err) {
     console.error('Initialization error:', err);
@@ -72,7 +70,6 @@ async function initialize() {
   }
 }
 
-// Load CSV data for a specific year
 function loadDataForYear(year) {
   const filename = yearToFile[year];
   if (!filename) {
@@ -80,7 +77,6 @@ function loadDataForYear(year) {
   }
 
   return d3.csv(`data/${filename}`).then(data => {
-    // Convert data types
     return data.map(d => {
       return {
         latitude: +d.latitude,
@@ -94,19 +90,34 @@ function loadDataForYear(year) {
   });
 }
 
-// Process all loaded data into weekly chunks
-function processAllDataIntoWeeks() {
-  weeksData = [];
+function processTimeChunks(mode, customRange = null) {
+  timeChunks = [];
 
+  if (mode === 'weekly') {
+    processWeeklyChunks();
+  } else if (mode === 'monthly') {
+    processMonthlyChunks();
+  } else if (mode === 'custom-range') {
+    processCustomRangeChunks(customRange);
+  } else if (mode === 'static-range') {
+    processStaticRange(customRange);
+  }
+
+  // Reset current index
+  currentIndex = 0;
+
+  // Update slider
+  updateSlider();
+}
+
+function processWeeklyChunks() {
   for (let year = 2004; year <= 2024; year++) {
     const yearData = allData[year];
     if (!yearData || yearData.length === 0) continue;
 
-    // Find date range for this year
     const minDate = d3.min(yearData, d => d.time);
     const maxDate = d3.max(yearData, d => d.time);
 
-    // Create weekly chunks
     let currentWeekStart = new Date(minDate);
     currentWeekStart.setHours(0, 0, 0, 0);
 
@@ -114,28 +125,115 @@ function processAllDataIntoWeeks() {
       const weekEnd = new Date(currentWeekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
 
-      // Filter data for this week
       const weekData = yearData.filter(d =>
         d.time >= currentWeekStart && d.time < weekEnd
       );
 
-      weeksData.push({
-        year: year,
+      if (weekData.length > 0) {
+        timeChunks.push({
+          year: year,
+          startDate: new Date(currentWeekStart),
+          endDate: new Date(weekEnd),
+          data: weekData
+        });
+      }
+
+      currentWeekStart = new Date(weekEnd);
+    }
+  }
+}
+
+function processMonthlyChunks() {
+  for (let year = 2004; year <= 2024; year++) {
+    const yearData = allData[year];
+    if (!yearData || yearData.length === 0) continue;
+
+    const minDate = d3.min(yearData, d => d.time);
+    const maxDate = d3.max(yearData, d => d.time);
+
+    let currentMonthStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    currentMonthStart.setHours(0, 0, 0, 0);
+
+    while (currentMonthStart < maxDate) {
+      const monthEnd = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() + 1, 1);
+
+      const monthData = yearData.filter(d =>
+        d.time >= currentMonthStart && d.time < monthEnd
+      );
+
+      if (monthData.length > 0) {
+        timeChunks.push({
+          year: year,
+          startDate: new Date(currentMonthStart),
+          endDate: new Date(monthEnd),
+          data: monthData
+        });
+      }
+
+      currentMonthStart = new Date(monthEnd);
+    }
+  }
+}
+
+function processCustomRangeChunks(range) {
+  if (!range) return;
+
+  const { startDate, endDate } = range;
+  const allDataFlat = Object.values(allData).flat();
+
+  // Filter data within range
+  const rangeData = allDataFlat.filter(d =>
+    d.time >= startDate && d.time <= endDate
+  );
+
+  if (rangeData.length === 0) return;
+
+  // Process into weekly chunks within the range
+  let currentWeekStart = new Date(startDate);
+  currentWeekStart.setHours(0, 0, 0, 0);
+
+  while (currentWeekStart < endDate) {
+    const weekEnd = new Date(currentWeekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    const weekData = rangeData.filter(d =>
+      d.time >= currentWeekStart && d.time < weekEnd
+    );
+
+    if (weekData.length > 0) {
+      timeChunks.push({
+        year: currentWeekStart.getFullYear(),
         startDate: new Date(currentWeekStart),
         endDate: new Date(weekEnd),
         data: weekData
       });
-
-      // Move to next week
-      currentWeekStart = new Date(weekEnd);
     }
-  }
 
-  // Filter out empty weeks if needed
-  weeksData = weeksData.filter(week => week.data.length > 0);
+    currentWeekStart = new Date(weekEnd);
+  }
 }
 
-// Set up UI controls and event listeners
+function processStaticRange(range) {
+  if (!range) return;
+
+  const { startDate, endDate } = range;
+  const allDataFlat = Object.values(allData).flat();
+
+  // Filter data within range
+  const rangeData = allDataFlat.filter(d =>
+    d.time >= startDate && d.time <= endDate
+  );
+
+  if (rangeData.length > 0) {
+    timeChunks = [{
+      year: `${startDate.getFullYear()}-${endDate.getFullYear()}`,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      data: rangeData
+    }];
+  }
+}
+
 function setupUI() {
   // Attribute dropdown
   d3.select('#attribute-dropdown').on('change', function () {
@@ -143,18 +241,62 @@ function setupUI() {
     magChart.updateChart(selectedAttribute);
   });
 
-  // Configure slider
-  const slider = d3.select('#year-slider')
-    .attr('min', 0)
-    .attr('max', weeksData.length - 1)
-    .attr('value', 0);
+  // Mode selector
+  d3.select('#mode-selector').on('change', function () {
+    pauseAnimation();
+    currentMode = d3.select(this).property('value');
 
-  // Slider input handler
-  slider.on('input', function () {
-    if (!isDataLoaded) return;
+    // Show/hide relevant controls
+    updateControlVisibility();
 
-    currentWeek = +this.value;
-    updateAllVisualizations(weeksData[currentWeek].data);
+    // Process data for new mode
+    if (currentMode === 'custom-range' || currentMode === 'static-range') {
+      // Get dates from date pickers
+      const startDate = new Date(d3.select('#start-date').property('value'));
+      const endDate = new Date(d3.select('#end-date').property('value'));
+
+      if (isNaN(startDate) || isNaN(endDate)) {
+        alert('Please select valid dates');
+        return;
+      }
+
+      processTimeChunks(currentMode, { startDate, endDate });
+    } else {
+      processTimeChunks(currentMode);
+    }
+
+    updateAllVisualizations(timeChunks[currentIndex].data);
+    updateDateDisplay();
+  });
+
+  // Date pickers
+  d3.select('#apply-range').on('click', function () {
+    if (currentMode !== 'custom-range' && currentMode !== 'static-range') return;
+
+    const startDate = new Date(d3.select('#start-date').property('value'));
+    const endDate = new Date(d3.select('#end-date').property('value'));
+
+    if (isNaN(startDate) || isNaN(endDate)) {
+      alert('Please select valid dates');
+      return;
+    }
+
+    if (startDate >= endDate) {
+      alert('End date must be after start date');
+      return;
+    }
+
+    pauseAnimation();
+    processTimeChunks(currentMode, { startDate, endDate });
+    updateAllVisualizations(timeChunks[currentIndex].data);
+    updateDateDisplay();
+  });
+
+  d3.select('#year-slider').on('input', function () {
+    if (!isDataLoaded || timeChunks.length === 0) return;
+
+    currentIndex = +this.value;
+    updateAllVisualizations(timeChunks[currentIndex].data); // Explicit update
     updateDateDisplay();
   });
 
@@ -167,7 +309,6 @@ function setupUI() {
   // Speed control
   d3.select('#animation-speed').on('change', function () {
     if (playInterval) {
-      // If animation is playing, restart with new speed
       pauseAnimation();
       playAnimation();
     }
@@ -175,57 +316,107 @@ function setupUI() {
 
   // Loop checkbox
   d3.select('#loop-checkbox').on('change', function () {
-    // No immediate action needed, checked during animation
+    // No immediate action needed
   });
+
+  // Initialize control visibility
+  updateControlVisibility();
 }
 
-// Update all visualizations with new data
+function updateControlVisibility() {
+  // Hide all range controls first
+  d3.select('#custom-range-controls').style('display', 'none');
+  d3.select('#static-range-controls').style('display', 'none');
+
+  // Show play controls by default (will be hidden for static mode)
+  d3.select('#play-controls').style('display', 'flex');
+
+  // Update speed label based on mode
+  const speedLabel = currentMode === 'monthly' ? 'sec/month' : 'sec/week';
+  d3.select('#speed-label').text(speedLabel);
+
+  // Show relevant controls based on current mode
+  switch (currentMode) {
+    case 'custom-range':
+      d3.select('#custom-range-controls').style('display', 'flex');
+      break;
+    case 'static-range':
+      d3.select('#custom-range-controls').style('display', 'flex');
+      d3.select('#play-controls').style('display', 'none');
+      break;
+    default:
+      // For weekly and monthly modes, no additional controls needed
+      break;
+  }
+}
+
+function updateSlider() {
+  const slider = d3.select('#year-slider')
+    .attr('min', 0)
+    .attr('max', Math.max(0, timeChunks.length - 1))
+    .attr('value', 0);
+}
+
 function updateAllVisualizations(data) {
-  leafletMap.data = data;
-  leafletMap.updateVis();
+  // Add console logs to verify data is being passed correctly
+  console.log('Updating visualizations with data:', data.length, 'points');
 
-  timeline.data = data;
-  timeline.updateVis();
+  if (leafletMap) {
+    leafletMap.data = data;
+    leafletMap.updateVis();
+  }
 
-  magChart.data = data;
-  magChart.updateChart(selectedAttribute);
+  if (timeline) {
+    timeline.data = data;
+    timeline.updateVis();
+  }
+
+  if (magChart) {
+    magChart.data = data;
+    magChart.updateChart(selectedAttribute);
+  }
 }
 
-// Update the date display
 function updateDateDisplay() {
-  const weekInfo = weeksData[currentWeek];
-  const startStr = weekInfo.startDate.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-  const endStr = weekInfo.endDate.toLocaleDateString('en-US', {
+  if (timeChunks.length === 0) return;
+
+  const chunk = timeChunks[currentIndex];
+  const startStr = chunk.startDate.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
   });
 
-  d3.select('#current-date-display').html(`
-    <strong>Year:</strong> ${weekInfo.year} | 
-    <strong>Week:</strong> ${startStr} to ${endStr} | 
-    <strong>Earthquakes:</strong> ${weekInfo.data.length}
-  `);
+  let dateText;
+
+  if (currentMode === 'static-range') {
+    const endStr = chunk.endDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    dateText = `<strong>Range:</strong> ${startStr} to ${endStr} | <strong>Earthquakes:</strong> ${chunk.data.length}`;
+  } else {
+    const endStr = chunk.endDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    dateText = `<strong>Year:</strong> ${chunk.year} | <strong>${currentMode === 'monthly' ? 'Month' : 'Week'}:</strong> ${startStr} to ${endStr} | <strong>Earthquakes:</strong> ${chunk.data.length}`;
+  }
+
+  d3.select('#current-date-display').html(dateText);
 }
 
-// Animation control functions
-// Animation control functions - FIXED VERSION
 function playAnimation() {
-  if (!isDataLoaded) return;
+  if (!isDataLoaded || timeChunks.length === 0 || currentMode === 'static-range') return;
 
-  // UI state
   d3.select('#play-button').attr('disabled', true);
   d3.select('#pause-button').attr('disabled', null);
 
-  // Get speed setting (convert to milliseconds)
   const speedSec = +d3.select('#animation-speed').property('value');
   const intervalMs = speedSec * 1000;
 
-  // Clear any existing interval
   if (playInterval) {
     clearInterval(playInterval);
   }
@@ -233,17 +424,18 @@ function playAnimation() {
   playInterval = setInterval(() => {
     const shouldLoop = d3.select('#loop-checkbox').property('checked');
 
-    if (currentWeek < weeksData.length - 1) {
-      currentWeek++;
+    if (currentIndex < timeChunks.length - 1) {
+      currentIndex++;
     } else if (shouldLoop) {
-      currentWeek = 0; // Loop back to start
+      currentIndex = 0;
     } else {
       pauseAnimation();
       return;
     }
 
-    // Update UI and visualizations
-    d3.select('#year-slider').property('value', currentWeek).dispatch('input');
+    // Update slider and visualizations directly
+    d3.select('#year-slider').property('value', currentIndex);
+    updateAllVisualizations(timeChunks[currentIndex].data); // Direct update
     updateDateDisplay();
   }, intervalMs);
 }
@@ -254,7 +446,6 @@ function pauseAnimation() {
     playInterval = null;
   }
 
-  // UI state
   d3.select('#play-button').attr('disabled', null);
   d3.select('#pause-button').attr('disabled', true);
 }
