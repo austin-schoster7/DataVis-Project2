@@ -9,60 +9,66 @@
   font-family: sans-serif;
 }
 
-/* Container for all visualizations: left map, right side stacked */
+/* Main container for map (left) + side container (right).
+   No fixed height, so it can grow as needed. */
 #visualizations {
   display: flex;
-  flex-direction: row; /* row for map + side container */
+  flex-direction: row;
   gap: 10px;
   padding: 10px 20px;
   background-color: #f7f7f7;
   font-family: sans-serif;
-  height: 750px; /* total height for the row */
   box-sizing: border-box;
+  /* No height: 750px; -> remove so it can auto-size */
+  /* If you see partial clipping, also try: overflow: visible; */
+  overflow: visible;
 }
 
-/* Left map container takes ~70% width, full height */
+/* Left map container:
+   - Takes ~70% of the width
+   - Has a min-height so the map is tall enough.
+   - If you want a fixed height, you can do min-height + max-height, etc. */
 #map-container {
-  flex: 70;
+  flex: 0 0 70%; /* 70% width */
   border: 1px solid #ccc;
   background-color: #fff;
   position: relative;
-  height: 100%;
   display: flex; /* so #my-map can fill it */
+  min-height: 700px; /* ensures a decent initial height for the map */
+  overflow: hidden;  /* typically for Leaflet */
 }
 
-/* The actual Leaflet map: fill its parent */
+/* The Leaflet map fills its container */
 #my-map {
   width: 100%;
   height: 100%;
 }
 
-/* Right side container: stacked timeline + bar chart */
+/* Right side container:
+   - Takes ~30% of the width
+   - Has a min-width to prevent squishing your charts
+   - If your screen is smaller than 1200px total, adjust accordingly */
 #side-container {
-  flex: 30; 
+  flex: 0 0 30%; /* 30% width */
+  min-width: 500px; /* ensure it’s not too narrow for axis labels */
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow: visible; /* allow charts to show outside if needed */
+}
+
+#timeline, #mag-chart-container {
+  min-height: 400px;
+  overflow: visible; /* so labels aren't clipped */
+  position: relative;
+  border: 1px solid #ccc;
+}
+
+/* The “responsive SVG” trick: 
+   Tells the SVG to fill 100% of its parent’s width/height. */
+.svg-content {
+  width: 100%;
   height: 100%;
-}
-
-/* Timeline: top half of side container */
-#timeline {
-  flex: 1; /* half the container (along with the bar chart) */
-  background-color: #fff;
-  border: 1px solid #ccc;
-  position: relative;
-}
-
-/* Bar chart container: bottom half of side container */
-#mag-chart-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: #fff;
-  border: 1px solid #ccc;
-  position: relative;
-  padding: 10px;
 }
 
 /* The actual bar chart (SVG) inside the container */
@@ -96,4 +102,19 @@
   z-index: 1000;
   opacity: 0; /* start hidden */
   font-family: sans-serif;
+}
+
+/* Optional header info styling */
+#header-info {
+  font-size: 1.2rem;
+  font-family: sans-serif;
+  background-color: #f7f7f7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 10px;
+}
+#header-info p {
+  margin: 0.5rem 0;
 }
