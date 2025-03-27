@@ -27,7 +27,7 @@ let leafletMap, timeline, magChart;
 let currentIndex = 0;
 let playInterval = null;
 let allData = {};
-let timeChunks = []; // Will hold weeks, months, or custom ranges
+let timeChunks = []; // Will hold weeks, months, years, or custom ranges
 let isDataLoaded = false;
 let selectedAttribute = 'mag';
 let currentMode = 'weekly'; // Default mode
@@ -97,6 +97,8 @@ function processTimeChunks(mode, customRange = null) {
     processWeeklyChunks();
   } else if (mode === 'monthly') {
     processMonthlyChunks();
+  } else if (mode === 'yearly') {
+    processYearlyChunks();
   } else if (mode === 'custom-range') {
     processCustomRangeChunks(customRange);
   } else if (mode === 'static-range') {
@@ -175,6 +177,29 @@ function processMonthlyChunks() {
   }
 }
 
+function processYearlyChunks() {
+  for (let year = 2004; year <= 2024; year++) {
+    const yearData = allData[year];
+    if (!yearData || yearData.length === 0) continue;
+
+    const minDate = new Date(year, 0, 1); // January 1st of the year
+    const maxDate = new Date(year + 1, 0, 1); // January 1st of next year
+
+    const yearDataFiltered = yearData.filter(d =>
+      d.time >= minDate && d.time < maxDate
+    );
+
+    if (yearDataFiltered.length > 0) {
+      timeChunks.push({
+        year: year,
+        startDate: new Date(minDate),
+        endDate: new Date(maxDate),
+        data: yearDataFiltered
+      });
+    }
+  }
+}
+
 function processCustomRangeChunks(range) {
   if (!range) return;
 
@@ -241,7 +266,7 @@ function setupUI() {
     magChart.updateChart(selectedAttribute);
   });
 
-  // Mode selector
+  // Mode selector - Updated with yearly option
   d3.select('#mode-selector').on('change', function () {
     pauseAnimation();
     currentMode = d3.select(this).property('value');
@@ -292,11 +317,12 @@ function setupUI() {
     updateDateDisplay();
   });
 
+  // Slider input handler
   d3.select('#year-slider').on('input', function () {
     if (!isDataLoaded || timeChunks.length === 0) return;
 
     currentIndex = +this.value;
-    updateAllVisualizations(timeChunks[currentIndex].data); // Explicit update
+    updateAllVisualizations(timeChunks[currentIndex].data);
     updateDateDisplay();
   });
 
@@ -332,7 +358,9 @@ function updateControlVisibility() {
   d3.select('#play-controls').style('display', 'flex');
 
   // Update speed label based on mode
-  const speedLabel = currentMode === 'monthly' ? 'sec/month' : 'sec/week';
+  let speedLabel = 'sec/week';
+  if (currentMode === 'monthly') speedLabel = 'sec/month';
+  else if (currentMode === 'yearly') speedLabel = 'sec/year';
   d3.select('#speed-label').text(speedLabel);
 
   // Show relevant controls based on current mode
@@ -345,7 +373,7 @@ function updateControlVisibility() {
       d3.select('#play-controls').style('display', 'none');
       break;
     default:
-      // For weekly and monthly modes, no additional controls needed
+      // For weekly, monthly, and yearly modes
       break;
   }
 }
@@ -358,8 +386,10 @@ function updateSlider() {
 }
 
 function updateAllVisualizations(data) {
-  // Add console logs to verify data is being passed correctly
-  console.log('Updating visualizations with data:', data.length, 'points');
+  if (!data || !Array.isArray(data)) {
+    console.error('Invalid data passed to updateAllVisualizations');
+    return;
+  }
 
   if (leafletMap) {
     leafletMap.data = data;
@@ -402,7 +432,9 @@ function updateDateDisplay() {
       month: 'short',
       day: 'numeric'
     });
-    dateText = `<strong>Year:</strong> ${chunk.year} | <strong>${currentMode === 'monthly' ? 'Month' : 'Week'}:</strong> ${startStr} to ${endStr} | <strong>Earthquakes:</strong> ${chunk.data.length}`;
+    const periodType = currentMode === 'monthly' ? 'Month' :
+      currentMode === 'yearly' ? 'Year' : 'Week';
+    dateText = `<strong>Year:</strong> ${chunk.year} | <strong>${periodType}:</strong> ${startStr} to ${endStr} | <strong>Earthquakes:</strong> ${chunk.data.length}`;
   }
 
   d3.select('#current-date-display').html(dateText);
@@ -433,9 +465,7 @@ function playAnimation() {
       return;
     }
 
-    // Update slider and visualizations directly
-    d3.select('#year-slider').property('value', currentIndex);
-    updateAllVisualizations(timeChunks[currentIndex].data); // Direct update
+    d3.select('#year-slider').property('value', currentIndex).dispatch('input');
     updateDateDisplay();
   }, intervalMs);
 }

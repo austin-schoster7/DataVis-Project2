@@ -74,30 +74,30 @@ class LeafletMap {
     vis.circles = vis.svg.selectAll('circle')
       .data(vis.data)
       .join('circle')
-        .attr('stroke', 'black')
-        .attr('fill', d => vis.colorScale(d.mag))
-        .attr('r', d => vis.radiusScale(d.mag))
-        .attr('cx', d => vis.project(d).x)
-        .attr('cy', d => vis.project(d).y)
-        .on('mouseover', (event, d) => {
-          d3.select('#tooltip')
-            .style('opacity', 1)
-            .html(`
+      .attr('stroke', 'black')
+      .attr('fill', d => vis.colorScale(d.mag))
+      .attr('r', d => vis.radiusScale(d.mag))
+      .attr('cx', d => vis.project(d).x)
+      .attr('cy', d => vis.project(d).y)
+      .on('mouseover', (event, d) => {
+        d3.select('#tooltip')
+          .style('opacity', 1)
+          .html(`
               <b>Location:</b> ${d.place || 'Unknown'}<br>
               <b>Magnitude:</b> ${d.mag}<br>
               <b>Depth:</b> ${d.depth} km <br>
               <b>Date:</b> ${d.time.toLocaleDateString()}<br>
             `);
-        })
-        .on('mousemove', (event) => {
-          d3.select('#tooltip')
-            .style('left', (event.pageX + 10) + 'px')
-            .style('top', (event.pageY + 10) + 'px');
-        })
-        .on('mouseleave', () => {
-          d3.select('#tooltip')
-            .style('opacity', 0);
-        });
+      })
+      .on('mousemove', (event) => {
+        d3.select('#tooltip')
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY + 10) + 'px');
+      })
+      .on('mouseleave', () => {
+        d3.select('#tooltip')
+          .style('opacity', 0);
+      });
 
     // 7) Update circle positions on map zoom/pan
     vis.map.on('zoomend moveend', () => vis.updateVis());
@@ -121,28 +121,29 @@ class LeafletMap {
     vis.circles = vis.svg.selectAll('circle')
       .data(vis.data)
       .join('circle')
-        .attr('stroke', 'black')
-        .attr('fill', d => vis.colorScale(d.mag))
-        .attr('r', d => vis.radiusScale(d.mag))
-        // re-attach tooltip handlers if needed
-        .on('mouseover', (event, d) => {
-          d3.select('#tooltip')
-            .style('opacity', 1)
-            .html(`
+      .attr('stroke', 'black')
+      .attr('fill', d => vis.colorScale(d.mag))
+      .attr('r', d => vis.radiusScale(d.mag))
+      // re-attach tooltip handlers if needed
+      .on('mouseover', (event, d) => {
+        d3.select('#tooltip')
+          .style('opacity', 1)
+          .html(`
               <b>Location:</b> ${d.place || 'Unknown'}<br>
               <b>Magnitude:</b> ${d.mag}<br>
-              <b>Depth:</b> ${d.depth} km
+              <b>Depth:</b> ${d.depth} km <br>
+              <b>Date:</b> ${d.time.toLocaleDateString()}<br>
             `);
-        })
-        .on('mousemove', (event) => {
-          d3.select('#tooltip')
-            .style('left', (event.pageX + 10) + 'px')
-            .style('top', (event.pageY + 10) + 'px');
-        })
-        .on('mouseleave', () => {
-          d3.select('#tooltip')
-            .style('opacity', 0);
-        });
+      })
+      .on('mousemove', (event) => {
+        d3.select('#tooltip')
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY + 10) + 'px');
+      })
+      .on('mouseleave', () => {
+        d3.select('#tooltip')
+          .style('opacity', 0);
+      });
 
     // UPDATE POSITIONS
     vis.circles
