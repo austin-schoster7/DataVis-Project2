@@ -127,6 +127,9 @@ class LeafletMap {
     };
     vis.legend.addTo(vis.map);
 
+    // Add info control
+    vis.addInfoControl();
+
     vis.map.on('zoomend moveend', () => vis.updateVis());
   }
 
@@ -186,6 +189,41 @@ class LeafletMap {
   // Convert lat/lng to x/y (same as before)
   project(d) {
     return this.map.latLngToLayerPoint([d.latitude, d.longitude]);
+  }
+
+  // Add info control to map
+  addInfoControl() {
+    const vis = this;
+
+    // Create control container
+    vis.infoControl = L.control({ position: 'topleft' });
+
+    vis.infoControl.onAdd = function (map) {
+      const container = L.DomUtil.create('div', 'info-container');
+
+      // Info icon
+      const infoIcon = L.DomUtil.create('div', 'info-control', container);
+      infoIcon.innerHTML = 'i';
+
+      // Info panel (hidden by default)
+      const infoPanel = L.DomUtil.create('div', 'info-panel', container);
+      infoPanel.innerHTML = `
+          <h3>Map Instructions</h3>
+          <ul>
+              <li><strong>Click</strong> on an earthquake to select it</li>
+              <li>Selected quake turns <strong class="text-yellow">yellow</strong></li>
+              <li>Quakes within 24 hours before turn <strong class="text-green">green</strong></li>
+              <li>Quakes within 24 hours after turn <strong class="text-blue">blue</strong></li>
+              <li>Click the selected quake again to deselect</li>
+              <li>Hover over any quake for details</li>
+          </ul>
+          <p>Use the layer control to change the base map.</p>
+      `;
+
+      return container;
+    };
+
+    vis.infoControl.addTo(vis.map);
   }
 
   updateVis() {
