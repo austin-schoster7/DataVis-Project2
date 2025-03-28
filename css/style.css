@@ -9,6 +9,10 @@
   font-family: sans-serif;
 }
 
+circle:hover {
+  cursor: pointer;
+}
+
 /* Main container for map (left) + side container (right).
    No fixed height, so it can grow as needed. */
 #visualizations {
@@ -29,13 +33,17 @@
    - Has a min-height so the map is tall enough.
    - If you want a fixed height, you can do min-height + max-height, etc. */
 #map-container {
-  flex: 0 0 70%; /* 70% width */
+  flex: 0 0 70%;
+  /* 70% width */
   border: 1px solid #ccc;
   background-color: #fff;
   position: relative;
-  display: flex; /* so #my-map can fill it */
-  min-height: 700px; /* ensures a decent initial height for the map */
-  overflow: hidden;  /* typically for Leaflet */
+  display: flex;
+  /* so #my-map can fill it */
+  min-height: 700px;
+  /* ensures a decent initial height for the map */
+  overflow: hidden;
+  /* typically for Leaflet */
 }
 
 /* The Leaflet map fills its container */
@@ -49,17 +57,22 @@
    - Has a min-width to prevent squishing your charts
    - If your screen is smaller than 1200px total, adjust accordingly */
 #side-container {
-  flex: 0 0 30%; /* 30% width */
-  min-width: 500px; /* ensure it’s not too narrow for axis labels */
+  flex: 0 0 30%;
+  /* 30% width */
+  min-width: 500px;
+  /* ensure it’s not too narrow for axis labels */
   display: flex;
   flex-direction: column;
   gap: 10px;
-  overflow: visible; /* allow charts to show outside if needed */
+  overflow: visible;
+  /* allow charts to show outside if needed */
 }
 
-#timeline, #mag-chart-container {
+#timeline,
+#mag-chart-container {
   min-height: 400px;
-  overflow: visible; /* so labels aren't clipped */
+  overflow: visible;
+  /* so labels aren't clipped */
   position: relative;
   border: 1px solid #ccc;
 }
@@ -83,6 +96,7 @@
   font-weight: bold;
   margin-right: 5px;
 }
+
 #attribute-dropdown {
   margin-bottom: 10px;
   padding: 5px;
@@ -100,7 +114,8 @@
   pointer-events: none;
   transition: opacity 0.1s ease;
   z-index: 1000;
-  opacity: 0; /* start hidden */
+  opacity: 0;
+  /* start hidden */
   font-family: sans-serif;
 }
 
@@ -115,6 +130,7 @@
   justify-content: center;
   padding-bottom: 10px;
 }
+
 #header-info p {
   margin: 0.5rem 0;
 }

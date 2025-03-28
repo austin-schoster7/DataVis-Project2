@@ -266,6 +266,12 @@ function setupUI() {
     magChart.updateChart(selectedAttribute);
   });
 
+  // Toggle selection mode
+  d3.select('#toggle-selection').on('click', function () {
+    leafletMap.toggleSelectionMode();
+    d3.select(this).classed('active', leafletMap.isSelectionMode);
+  });
+
   // Mode selector - Updated with yearly option
   d3.select('#mode-selector').on('change', function () {
     pauseAnimation();
