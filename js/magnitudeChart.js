@@ -116,7 +116,7 @@ class MagnitudeChart {
               .style('opacity', 1)
               .html(`
                 <b>Range:</b> ${d.x0.toFixed(2)} - ${d.x1.toFixed(2)}<br>
-                <b>Count:</b> ${d.length}
+                <b>Quakes:</b> ${d.length}
               `);
           })
           .on('mousemove', (event) => {

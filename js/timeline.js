@@ -7,7 +7,6 @@ class Timeline {
       };
       this.data = _data;
   
-      // We'll define a 600x400 internal coordinate system
       this.internalWidth = 600;
       this.internalHeight = 400;
   
