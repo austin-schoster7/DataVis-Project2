@@ -28,6 +28,7 @@ let currentIndex = 0;
 let playInterval = null;
 let allData = {};
 let timeChunks = []; // Will hold weeks, months, years, or custom ranges
+let timeChunksTimeline = [];
 let isDataLoaded = false;
 let selectedAttribute = 'mag';
 let currentMode = 'weekly'; // Default mode
@@ -63,7 +64,7 @@ async function initialize() {
       updateVisualizationsOnSelection
     );
     
-    timeline = new Timeline({ parentElement: '#timeline' }, timeChunks[currentIndex].data, dispatcher);
+    timeline = new Timeline({ parentElement: '#timeline' }, timeChunksTimeline[currentIndex].data, dispatcher);
     magChart = new MagnitudeChart({ parentElement: '#mag-chart' }, timeChunks[currentIndex].data);
 
     // Set up event listeners
@@ -101,7 +102,6 @@ function updateVisualizationsOnSelection(selectedData) {
   }
 }
 
-
 function handleBrushRange(range) {
   const currentChunk = timeChunks[currentIndex];
   if (!range) {
@@ -129,6 +129,15 @@ function updateMapAndChart(data) {
   // so it always shows the complete aggregated view.
 }
 
+function updateLinkedSelections(selectedEvent) {
+  if (timeline && typeof timeline.highlightSelection === 'function') {
+    timeline.highlightSelection(selectedEvent);
+  }
+  if (magChart && typeof magChart.highlightSelection === 'function') {
+    magChart.highlightSelection(selectedEvent);
+  }
+}
+
 function loadDataForYear(year) {
   const filename = yearToFile[year];
   if (!filename) {
@@ -151,6 +160,7 @@ function loadDataForYear(year) {
 
 function processTimeChunks(mode, customRange = null) {
   timeChunks = [];
+  timeChunksTimeline = [];
 
   if (mode === 'weekly') {
     processWeeklyChunks();
@@ -184,10 +194,17 @@ function processWeeklyChunks() {
 
     while (currentWeekStart < maxDate) {
       const weekEnd = new Date(currentWeekStart);
+      const weekEndTimeline = new Date(currentWeekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
+      weekEndTimeline.setDate(weekEndTimeline.getDate() + 7);
+      weekEndTimeline.setHours(23, 59, 59, 999);
 
       const weekData = yearData.filter(d =>
         d.time >= currentWeekStart && d.time < weekEnd
+      );
+
+      const weekDataTimeline = yearData.filter(d =>
+        d.time >= currentWeekStart && d.time < weekEndTimeline
       );
 
       if (weekData.length > 0) {
@@ -196,6 +213,12 @@ function processWeeklyChunks() {
           startDate: new Date(currentWeekStart),
           endDate: new Date(weekEnd),
           data: weekData
+        });
+        timeChunksTimeline.push({
+          year: year,
+          startDate: new Date(currentWeekStart),
+          endDate: new Date(weekEndTimeline),
+          data: weekDataTimeline
         });
       }
 
@@ -456,20 +479,24 @@ function updateAllVisualizations(data) {
     return;
   }
 
-  if (leafletMap) {
-    leafletMap.data = data;
-    leafletMap.updateVis();
-  }
+  // Get the current chunk
+  const currentChunk = timeChunks[currentIndex];
+  const currentChunkTimeline = timeChunksTimeline[currentIndex];
 
-  if (timeline) {
-    timeline.data = data;
-    timeline.updateVis();
-  }
+  // 1) Timeline: use the full data from the chunk.
+  // Also, pass the chunk’s endDate so the timeline can extend its domain by 1 day.
+  timeline.data = timeChunksTimeline[currentIndex].data;
+  timeline.chunkEnd = currentChunkTimeline.endDate; // store chunk's end date on timeline
+  timeline.updateVis();
 
-  if (magChart) {
-    magChart.data = data;
-    magChart.updateChart(selectedAttribute);
-  }
+  // 2) Map and bar chart: filter out events that occur on or after the chunk's end date.
+  const filteredData = data.filter(d => d.time < currentChunk.endDate);
+  
+  leafletMap.data = filteredData;
+  leafletMap.updateVis();
+
+  magChart.data = filteredData;
+  magChart.updateChart(selectedAttribute);
 }
 
 function updateDateDisplay() {

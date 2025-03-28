@@ -178,7 +178,29 @@ class MagnitudeChart {
       
         // Redraw
         vis.updateVis();
-      }      
+    }
+    
+    highlightSelection(selectedEvent) {
+        const dayInMs = 24 * 60 * 60 * 1000;
+        // Recompute bins
+        const bins = this.histogram(this.data);
+        // Redraw bars with highlight if any event in the bin is within the window
+        this.chartArea.selectAll('.bar')
+          .data(bins)
+          .join('rect')
+            .attr('class', 'bar')
+            .attr('x', d => this.xScale(d.x0))
+            .attr('width', d => Math.max(0, this.xScale(d.x1) - this.xScale(d.x0) - 1))
+            .attr('y', d => this.yScale(d.length))
+            .attr('height', d => this.height - this.yScale(d.length))
+            .attr('fill', d => {
+               if (!selectedEvent) return 'teal';
+               // If any event in the bin is within 24 hours of the selected event, highlight the bin
+               const highlight = d.some(e => Math.abs(e.time.getTime() - selectedEvent.time.getTime()) <= dayInMs);
+               return highlight ? 'orange' : 'teal';
+            }
+        );
+    } 
       
   }
   

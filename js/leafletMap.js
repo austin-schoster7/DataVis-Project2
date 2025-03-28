@@ -6,16 +6,15 @@ class LeafletMap {
     };
     this.data = _data;
     this.legend = null;
-    this.isSelectionMode = true; // Track if selection mode is active
-    this.selectedEvent = null; // Store the currently selected event
-    this.originalColors = new Map(); // Store original colors for reset
+    this.selectionLegend = null;
+    this.isSelectionMode = true;
+    this.selectedEvent = null;
+    this.originalColors = new Map();
     this.initVis();
   }
 
   initVis() {
     const vis = this;
-
-    // Initialize map and layers (same as before)
     vis.esriImagery = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       { attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, ...' }
@@ -37,13 +36,14 @@ class LeafletMap {
       { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS, Intermap...' }
     );
 
+    // (2) Initialize the map
     vis.map = L.map(vis.config.parentElement.substring(1), {
       center: [20, 0],
       zoom: 2,
       layers: [vis.esriImagery]
     });
 
-    // Layer control (same as before)
+    // (3) Add layer control
     const baseMaps = {
       'ESRI Imagery': vis.esriImagery,
       'OpenStreetMap': vis.osmStandard,
@@ -53,17 +53,17 @@ class LeafletMap {
     };
     L.control.layers(baseMaps).addTo(vis.map);
 
-    // Add D3 overlay
+    // (4) Add D3 overlay
     L.svg({ clickable: true }).addTo(vis.map);
     vis.overlay = d3.select(vis.map.getPanes().overlayPane);
     vis.svg = vis.overlay.select('svg').attr('pointer-events', 'auto');
 
-    // Create scales
+    // (5) Create scales for quake circles
     const magExtent = d3.extent(vis.data, d => d.mag);
     vis.colorScale = d3.scaleSequential(d3.interpolateReds).domain(magExtent);
     vis.radiusScale = d3.scaleLinear().domain(magExtent).range([2, 10]);
 
-    // Plot quake circles with click handler
+    // (6) Plot quake circles with click handler for selection
     vis.circles = vis.svg.selectAll('circle')
       .data(vis.data)
       .join('circle')
@@ -88,17 +88,16 @@ class LeafletMap {
           .style('top', (event.pageY + 10) + 'px');
       })
       .on('mouseleave', () => {
-        d3.select('#tooltip')
-          .style('opacity', 0);
+        d3.select('#tooltip').style('opacity', 0);
       })
-      .on('click', function (event, d) {
+      .on('click', function(event, d) {
         if (vis.isSelectionMode) {
           vis.handleEventSelection(d);
         }
       });
 
-    // Store original colors
-    vis.data.forEach((d, i) => {
+    // (7) Store original colors for resetting later
+    vis.data.forEach(d => {
       vis.originalColors.set(d, vis.colorScale(d.mag));
     });
 
@@ -157,25 +156,19 @@ class LeafletMap {
       }
     });
 
-    // Legend (same as before)
+    // (8) Create the static magnitude legend (if needed)
     vis.legend = L.control({ position: 'bottomright' });
-    vis.legend.onAdd = function (map) {
+    vis.legend.onAdd = function(map) {
       const div = L.DomUtil.create('div', 'info legend');
-
-      const [minMag, maxMag] = magExtent; // from earlier
+      const [minMag, maxMag] = magExtent;
       const breaks = d3.ticks(minMag, maxMag, 6);
-
       breaks.forEach((b, i) => {
         const color = vis.colorScale(b);
         const nextVal = breaks[i + 1];
         if (i < breaks.length - 1) {
-          div.innerHTML += `
-            <i style="background:${color}"></i>
-            ${b.toFixed(1)} &ndash; ${nextVal.toFixed(1)}<br>`;
+          div.innerHTML += `<i style="background:${color}"></i>${b.toFixed(1)} &ndash; ${nextVal.toFixed(1)}<br>`;
         } else {
-          div.innerHTML += `
-            <i style="background:${color}"></i>
-            ${b.toFixed(1)}+<br>`;
+          div.innerHTML += `<i style="background:${color}"></i>${b.toFixed(1)}+<br>`;
         }
       });
       return div;
@@ -185,65 +178,131 @@ class LeafletMap {
     // Add info control
     vis.addInfoControl();
 
+    // (9) When the map is zoomed or moved, update positions
     vis.map.on('zoomend moveend', () => vis.updateVis());
   }
 
-  // Handle event selection
+  // Convert latitude/longitude to x/y using Leaflet's latLngToLayerPoint
+  project(d) {
+    return this.map.latLngToLayerPoint([d.latitude, d.longitude]);
+  }
+
+  // Called when a quake dot is clicked
   handleEventSelection(selectedEvent) {
     const vis = this;
-
-    // If clicking the already selected event, deselect it
+  
+    // If clicking the same quake again => deselect
     if (vis.selectedEvent === selectedEvent) {
+      // 1) Reset highlights on the map
       vis.resetEventHighlights();
+      // 2) Remove the selection legend
+      vis.removeSelectionLegend();
+      // 3) Clear the selection in other views
+      updateLinkedSelections(null);
+      // 4) Clear the timeline brush
+      timeline.brushG.call(timeline.brush.move, null);
       return;
     }
-
-    // Reset any previous selection
+  
+    // Reset any previous selection first
     vis.resetEventHighlights();
-
-    // Store the selected event
+  
+    // Store the newly selected quake
     vis.selectedEvent = selectedEvent;
-
-    // Highlight selected event (yellow)
+  
+    // Highlight the selected quake in yellow
     vis.circles.filter(d => d === selectedEvent)
       .attr('fill', 'yellow')
       .attr('stroke', 'black')
       .attr('stroke-width', 2);
-
-    // Find events within 24 hours
+  
+    // Highlight neighbors within 24 hours
     const selectedTime = selectedEvent.time.getTime();
     const dayInMs = 24 * 60 * 60 * 1000;
-
     vis.data.forEach(event => {
       const eventTime = event.time.getTime();
       const timeDiff = eventTime - selectedTime;
-
-      if (Math.abs(timeDiff) <= dayInMs && event !== selectedEvent) {
-        // Highlight events before (green) and after (blue)
-        const color = timeDiff < 0 ? '#4CAF50' : '#2196F3'; // Green for before, blue for after
-
+      if (event !== selectedEvent && Math.abs(timeDiff) <= dayInMs) {
+        // Green if before, blue if after
+        const color = timeDiff < 0 ? '#4CAF50' : '#2196F3';
         vis.circles.filter(d => d === event)
           .attr('fill', color)
           .attr('stroke', 'black')
           .attr('stroke-width', 1.5);
       }
     });
-  }
+  
+    // Show the selection legend
+    vis.addSelectionLegend();
+  
+    // Suppose quakeTime is selectedEvent.time
+    const quakeTime = selectedEvent.time.getTime();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const startTime = quakeTime - dayMs;
+    const endTime = quakeTime + dayMs;
 
-  // Reset all event highlights
+    // 1) Check the timeline’s domain
+    const [domainMin, domainMax] = timeline.xScale.domain(); 
+    const domainMinT = domainMin.getTime();
+    const domainMaxT = domainMax.getTime();
+
+    // If the entire 24-hour window is outside the domain, skip the brush
+    if (endTime < domainMinT || startTime > domainMaxT) {
+      console.log('Quake is outside timeline domain; skipping timeline brush.');
+      return; 
+    }
+
+    // 2) Otherwise clamp the start/end times so they don’t exceed the domain
+    const clampedStart = Math.max(domainMinT, startTime);
+    const clampedEnd   = Math.min(domainMaxT, endTime);
+
+    // 3) Convert them back to Date objects
+    const startDate = new Date(clampedStart);
+    const endDate   = new Date(clampedEnd);
+
+    // 4) Now call the timeline brush
+    timeline.setBrushRange(startDate, endDate);
+  }  
+
+  // Remove all selection highlights and the selection legend
   resetEventHighlights() {
     const vis = this;
     vis.selectedEvent = null;
-
     vis.circles
       .attr('fill', d => vis.originalColors.get(d))
       .attr('stroke', 'black')
       .attr('stroke-width', 1);
+    vis.removeSelectionLegend();
   }
 
-  // Convert lat/lng to x/y (same as before)
-  project(d) {
-    return this.map.latLngToLayerPoint([d.latitude, d.longitude]);
+  addSelectionLegend() {
+    const vis = this;
+  
+    // If the selection legend is not already added, create it
+    if (!vis.selectionLegend) {
+      vis.selectionLegend = L.control({ position: 'bottomright' }); // bottom-right
+      vis.selectionLegend.onAdd = function(map) {
+        // Use the same class "info legend" for styling
+        const div = L.DomUtil.create('div', 'info legend');
+  
+        div.innerHTML = `
+          <strong>Selection Legend</strong><br>
+          <i style="background: yellow"></i> Selected Event<br>
+          <i style="background: #4CAF50"></i> 24 hrs Before<br>
+          <i style="background: #2196F3"></i> 24 hrs After<br>
+        `;
+        return div;
+      };
+      vis.selectionLegend.addTo(vis.map);
+    }
+  }  
+
+  removeSelectionLegend() {
+    const vis = this;
+    if (vis.selectionLegend) {
+      vis.selectionLegend.remove();
+      vis.selectionLegend = null;
+    }
   }
 
   // Add info control to map
@@ -287,27 +346,24 @@ class LeafletMap {
     vis.colorScale.domain(magExtent);
     vis.radiusScale.domain(magExtent);
 
-    // Store original colors before updating
-    vis.data.forEach((d, i) => {
+    // Update original colors
+    vis.data.forEach(d => {
       vis.originalColors.set(d, vis.colorScale(d.mag));
     });
 
+    // Re-bind circles
     vis.circles = vis.svg.selectAll('circle')
       .data(vis.data)
       .join('circle')
       .attr('stroke', 'black')
       .attr('fill', d => {
-        // If in selection mode and this is a highlighted event, keep its color
         if (vis.isSelectionMode && vis.selectedEvent) {
           const selectedTime = vis.selectedEvent.time.getTime();
           const eventTime = d.time.getTime();
           const dayInMs = 24 * 60 * 60 * 1000;
-          const timeDiff = eventTime - selectedTime;
-
+          const diff = eventTime - selectedTime;
           if (d === vis.selectedEvent) return 'yellow';
-          if (Math.abs(timeDiff) <= dayInMs) {
-            return timeDiff < 0 ? '#4CAF50' : '#2196F3';
-          }
+          if (Math.abs(diff) <= dayInMs) return diff < 0 ? '#4CAF50' : '#2196F3';
         }
         return vis.colorScale(d.mag);
       })
@@ -328,39 +384,33 @@ class LeafletMap {
           .style('top', (event.pageY + 10) + 'px');
       })
       .on('mouseleave', () => {
-        d3.select('#tooltip')
-          .style('opacity', 0);
+        d3.select('#tooltip').style('opacity', 0);
       })
-      .on('click', function (event, d) {
+      .on('click', function(event, d) {
         if (vis.isSelectionMode) {
           vis.handleEventSelection(d);
         }
       });
 
+    // Update positions
     vis.circles
       .attr('cx', d => vis.project(d).x)
       .attr('cy', d => vis.project(d).y);
 
-    // Update legend (same as before)
+    // Update the static legend (if needed)
     if (vis.legend) {
-      vis.legend.remove(); // remove old legend
-      // Re-define onAdd for new domain
-      vis.legend.onAdd = function (map) {
+      vis.legend.remove();
+      vis.legend.onAdd = function(map) {
         const div = L.DomUtil.create('div', 'info legend');
         const [minMag, maxMag] = magExtent;
         const breaks = d3.ticks(minMag, maxMag, 6);
-
         breaks.forEach((b, i) => {
           const color = vis.colorScale(b);
           const nextVal = breaks[i + 1];
           if (i < breaks.length - 1) {
-            div.innerHTML += `
-              <i style="background:${color}"></i>
-              ${b.toFixed(1)} &ndash; ${nextVal.toFixed(1)}<br>`;
+            div.innerHTML += `<i style="background:${color}"></i>${b.toFixed(1)} &ndash; ${nextVal.toFixed(1)}<br>`;
           } else {
-            div.innerHTML += `
-              <i style="background:${color}"></i>
-              ${b.toFixed(1)}+<br>`;
+            div.innerHTML += `<i style="background:${color}"></i>${b.toFixed(1)}+<br>`;
           }
         });
         return div;
