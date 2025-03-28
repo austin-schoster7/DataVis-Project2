@@ -4,8 +4,6 @@ class MagnitudeChart {
         parentElement: _config.parentElement,
         margin: { top: 40, right: 30, bottom: 50, left: 60 },
         bins: 10,
-        // We'll ignore width/height here, or keep them for reference.
-        // We'll define an internal coordinate system below.
         ..._config
       };
       this.data = _data;

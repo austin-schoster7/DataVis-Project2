@@ -32,6 +32,8 @@ let isDataLoaded = false;
 let selectedAttribute = 'mag';
 let currentMode = 'weekly'; // Default mode
 
+const dispatcher = d3.dispatch('brushRange');
+
 // Main initialization function
 async function initialize() {
   try {
@@ -56,8 +58,13 @@ async function initialize() {
 
     // Initialize visualizations
     leafletMap = new LeafletMap({ parentElement: '#my-map' }, timeChunks[currentIndex].data);
-    timeline = new Timeline({ parentElement: '#timeline' }, timeChunks[currentIndex].data);
+    timeline = new Timeline({ parentElement: '#timeline' }, timeChunks[currentIndex].data, dispatcher);
     magChart = new MagnitudeChart({ parentElement: '#mag-chart' }, timeChunks[currentIndex].data);
+
+    // Set up event listeners
+    dispatcher.on('brushRange', (range) => {
+      handleBrushRange(range);
+    });
 
     // Set up UI controls
     setupUI();
@@ -68,6 +75,33 @@ async function initialize() {
     console.error('Initialization error:', err);
     d3.select('#loading-message').text('Error loading data. Please try again.');
   }
+}
+
+function handleBrushRange(range) {
+  const currentChunk = timeChunks[currentIndex];
+  if (!range) {
+    // If the brush is cleared, update only the map and bar chart with the full chunk data.
+    updateMapAndChart(currentChunk.data);
+  } else {
+    const [startDate, endDate] = range;
+    // Filter data for map and bar chart only.
+    const filtered = currentChunk.data.filter(d => d.time >= startDate && d.time <= endDate);
+    updateMapAndChart(filtered);
+  }
+}
+
+function updateMapAndChart(data) {
+  if (leafletMap) {
+    leafletMap.data = data;
+    leafletMap.updateVis();
+  }
+
+  if (magChart) {
+    magChart.data = data;
+    magChart.updateChart(selectedAttribute);
+  }
+  // Note: We intentionally do NOT update the timeline here,
+  // so it always shows the complete aggregated view.
 }
 
 function loadDataForYear(year) {
