@@ -102,6 +102,61 @@ class LeafletMap {
       vis.originalColors.set(d, vis.colorScale(d.mag));
     });
 
+    // Brush group
+    vis.brushGroup = vis.svg.append("g").attr("class", "brush");
+
+    // Define brush
+    vis.brush = d3.brush()
+      .extent([[0, 0], [vis.svg.node().clientWidth, vis.svg.node().clientHeight]])
+      .on("start", () => d3.selectAll("circle").classed("selected", false))
+      .on("brush", ({ selection }) => {
+        if (!selection) return;
+    
+        const [[x0, y0], [x1, y1]] = selection;
+        
+        vis.circles.classed("selected", d => {
+          const x = vis.project(d).x;
+          const y = vis.project(d).y;
+          return x0 <= x && x <= x1 && y0 <= y && y <= y1;
+        });
+        const selectedData = vis.data.filter(d => {
+          const projected = vis.project(d);
+          return x0 <= projected.x && projected.x <= x1 && y0 <= projected.y && projected.y <= y1;
+        });
+    
+        // Update visualizations with the selected earthquakes
+        updateVisualizationsOnSelection(selectedData);
+    })
+    .on("end", ({ selection }) => {
+        if (!selection) {
+          d3.selectAll("circle").classed("selected", false);
+          updateVisualizationsOnSelection(timeChunks[currentIndex].data);
+        }
+    });
+    
+
+    const toggleBrush = d3.select("#toggleBrush");
+
+    // Function to enable/disable brushing
+    toggleBrush.on("change", function () {
+      if (this.checked) {
+        vis.map.dragging.disable();
+        vis.map.doubleClickZoom.disable();
+        vis.map.scrollWheelZoom.disable();
+
+        //enable brushing
+        vis.brushGroup.call(vis.brush);
+      } else {
+        vis.map.dragging.enable();
+        vis.map.doubleClickZoom.enable();
+        vis.map.scrollWheelZoom.enable();
+
+        // Clear existing brush selection and disable brushing
+        vis.brushGroup.call(vis.brush.move, null);
+        vis.brushGroup.on(".brush", null);
+      }
+    });
+
     // Legend (same as before)
     vis.legend = L.control({ position: 'bottomright' });
     vis.legend.onAdd = function (map) {

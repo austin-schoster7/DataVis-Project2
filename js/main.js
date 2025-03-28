@@ -57,7 +57,12 @@ async function initialize() {
     isDataLoaded = true;
 
     // Initialize visualizations
-    leafletMap = new LeafletMap({ parentElement: '#my-map' }, timeChunks[currentIndex].data);
+    leafletMap = new LeafletMap(
+      { parentElement: '#my-map' },
+      timeChunks[currentIndex].data,
+      updateVisualizationsOnSelection
+    );
+    
     timeline = new Timeline({ parentElement: '#timeline' }, timeChunks[currentIndex].data, dispatcher);
     magChart = new MagnitudeChart({ parentElement: '#mag-chart' }, timeChunks[currentIndex].data);
 
@@ -76,6 +81,26 @@ async function initialize() {
     d3.select('#loading-message').text('Error loading data. Please try again.');
   }
 }
+
+function updateVisualizationsOnSelection(selectedData) {
+  if (!selectedData || selectedData.length === 0) {
+    console.warn('No earthquakes selected.');
+    return;
+  }
+
+  console.log(`Updating visualizations with ${selectedData.length} selected quakes`);
+
+  if (timeline) {
+    timeline.data = selectedData;
+    timeline.updateVis();
+  }
+
+  if (magChart) {
+    magChart.data = selectedData;
+    magChart.updateChart(selectedAttribute);
+  }
+}
+
 
 function handleBrushRange(range) {
   const currentChunk = timeChunks[currentIndex];

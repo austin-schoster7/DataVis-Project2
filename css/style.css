@@ -221,3 +221,8 @@ circle:hover {
     -1px 1px 0 #000,
     1px 1px 0 #000;
 }
+
+.selected {
+  stroke: red;
+  stroke-width: 2px;
+}
