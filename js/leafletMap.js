@@ -8,13 +8,15 @@ class LeafletMap {
     this.legend = null;
     this.selectionLegend = null;
     this.isSelectionMode = true;
-    this.selectedEvent = null;
+    this.selectedEvent = null;   // from map clicks
+    this.selectedQuakes = null;  // from bar chart selection (an array)
     this.originalColors = new Map();
     this.initVis();
   }
 
   initVis() {
     const vis = this;
+    // (1) Define tile layers
     vis.esriImagery = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       { attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, ...' }
@@ -96,23 +98,19 @@ class LeafletMap {
         }
       });
 
-    // (7) Store original colors for resetting later
+    // (7) Store original colors
     vis.data.forEach(d => {
       vis.originalColors.set(d, vis.colorScale(d.mag));
     });
 
-    // Brush group
+    // (8) Set up a brush group (if needed; not directly used in our selection scenario)
     vis.brushGroup = vis.svg.append("g").attr("class", "brush");
-
-    // Define brush
     vis.brush = d3.brush()
       .extent([[0, 0], [vis.svg.node().clientWidth, vis.svg.node().clientHeight]])
       .on("start", () => d3.selectAll("circle").classed("selected", false))
       .on("brush", ({ selection }) => {
         if (!selection) return;
-    
         const [[x0, y0], [x1, y1]] = selection;
-        
         vis.circles.classed("selected", d => {
           const x = vis.project(d).x;
           const y = vis.project(d).y;
@@ -122,16 +120,14 @@ class LeafletMap {
           const projected = vis.project(d);
           return x0 <= projected.x && projected.x <= x1 && y0 <= projected.y && projected.y <= y1;
         });
-    
-        // Update visualizations with the selected earthquakes
         updateVisualizationsOnSelection(selectedData);
-    })
-    .on("end", ({ selection }) => {
+      })
+      .on("end", ({ selection }) => {
         if (!selection) {
           d3.selectAll("circle").classed("selected", false);
           updateVisualizationsOnSelection(timeChunks[currentIndex].data);
         }
-    });
+      });
     
 
     const toggleBrush = d3.select("#toggleBrush");
@@ -175,42 +171,39 @@ class LeafletMap {
     };
     vis.legend.addTo(vis.map);
 
-    // Add info control
+    // (10) Add info control for instructions
     vis.addInfoControl();
 
-    // (9) When the map is zoomed or moved, update positions
+    // (11) Update positions on zoom/pan
     vis.map.on('zoomend moveend', () => vis.updateVis());
   }
 
-  // Convert latitude/longitude to x/y using Leaflet's latLngToLayerPoint
+  // Helper: convert lat/lng to x/y
   project(d) {
     return this.map.latLngToLayerPoint([d.latitude, d.longitude]);
   }
 
-  // Called when a quake dot is clicked
+  // Handle selection from a map click (for individual quakes)
   handleEventSelection(selectedEvent) {
     const vis = this;
-  
+    
     // If clicking the same quake again => deselect
     if (vis.selectedEvent === selectedEvent) {
-      // 1) Reset highlights on the map
       vis.resetEventHighlights();
-      // 2) Remove the selection legend
       vis.removeSelectionLegend();
-      // 3) Clear the selection in other views
       updateLinkedSelections(null);
-      // 4) Clear the timeline brush
       timeline.brushG.call(timeline.brush.move, null);
       return;
     }
-  
-    // Reset any previous selection first
+    
+    // Reset any previous selection
     vis.resetEventHighlights();
-  
-    // Store the newly selected quake
+    
+    // Store selected event (clear any bar selection)
     vis.selectedEvent = selectedEvent;
-  
-    // Highlight the selected quake in yellow
+    vis.selectedQuakes = null; // clear bar selection
+    
+    // Highlight the selected quake: keep its original fill, add a red outline
     vis.circles.filter(d => d === selectedEvent)
       .attr('fill', 'yellow')
       .attr('stroke', 'black')
@@ -231,60 +224,45 @@ class LeafletMap {
           .attr('stroke-width', 1.5);
       }
     });
-  
-    // Show the selection legend
+    
+    // Show selection legend
     vis.addSelectionLegend();
-  
-    // Suppose quakeTime is selectedEvent.time
+    
+    // Set timeline brush for [selectedTime - 24h, selectedTime + 24h], if within timeline domain
     const quakeTime = selectedEvent.time.getTime();
-    const dayMs = 24 * 60 * 60 * 1000;
-    const startTime = quakeTime - dayMs;
-    const endTime = quakeTime + dayMs;
-
-    // 1) Check the timeline’s domain
-    const [domainMin, domainMax] = timeline.xScale.domain(); 
-    const domainMinT = domainMin.getTime();
-    const domainMaxT = domainMax.getTime();
-
-    // If the entire 24-hour window is outside the domain, skip the brush
-    if (endTime < domainMinT || startTime > domainMaxT) {
-      console.log('Quake is outside timeline domain; skipping timeline brush.');
-      return; 
+    const startTime = quakeTime - dayInMs;
+    const endTime = quakeTime + dayInMs;
+    const [domainMin, domainMax] = timeline.xScale.domain();
+    if (endTime >= domainMin.getTime() && startTime <= domainMax.getTime()) {
+      const clampedStart = Math.max(domainMin.getTime(), startTime);
+      const clampedEnd = Math.min(domainMax.getTime(), endTime);
+      timeline.setBrushRange(new Date(clampedStart), new Date(clampedEnd));
     }
+    
+    // Update linked selections in other views (using map click selection)
+    updateLinkedSelections(selectedEvent);
+  }
 
-    // 2) Otherwise clamp the start/end times so they don’t exceed the domain
-    const clampedStart = Math.max(domainMinT, startTime);
-    const clampedEnd   = Math.min(domainMaxT, endTime);
-
-    // 3) Convert them back to Date objects
-    const startDate = new Date(clampedStart);
-    const endDate   = new Date(clampedEnd);
-
-    // 4) Now call the timeline brush
-    timeline.setBrushRange(startDate, endDate);
-  }  
-
-  // Remove all selection highlights and the selection legend
+  // Reset selection on map
   resetEventHighlights() {
     const vis = this;
     vis.selectedEvent = null;
+    vis.selectedQuakes = null;
     vis.circles
       .attr('fill', d => vis.originalColors.get(d))
       .attr('stroke', 'black')
-      .attr('stroke-width', 1);
+      .attr('stroke-width', 1)
+      .attr('opacity', 1);
     vis.removeSelectionLegend();
   }
 
+  // Add selection legend (bottom-right, styled like static legend)
   addSelectionLegend() {
     const vis = this;
-  
-    // If the selection legend is not already added, create it
     if (!vis.selectionLegend) {
-      vis.selectionLegend = L.control({ position: 'bottomright' }); // bottom-right
+      vis.selectionLegend = L.control({ position: 'bottomright' });
       vis.selectionLegend.onAdd = function(map) {
-        // Use the same class "info legend" for styling
         const div = L.DomUtil.create('div', 'info legend');
-  
         div.innerHTML = `
           <strong>Selection Legend</strong><br>
           <i style="background: yellow"></i> Selected Event<br>
@@ -295,8 +273,9 @@ class LeafletMap {
       };
       vis.selectionLegend.addTo(vis.map);
     }
-  }  
+  }
 
+  // Remove selection legend
   removeSelectionLegend() {
     const vis = this;
     if (vis.selectionLegend) {
@@ -305,21 +284,14 @@ class LeafletMap {
     }
   }
 
-  // Add info control to map
+  // Add info control for instructions
   addInfoControl() {
     const vis = this;
-
-    // Create control container
     vis.infoControl = L.control({ position: 'topleft' });
-
-    vis.infoControl.onAdd = function (map) {
+    vis.infoControl.onAdd = function(map) {
       const container = L.DomUtil.create('div', 'info-container');
-
-      // Info icon
       const infoIcon = L.DomUtil.create('div', 'info-control', container);
       infoIcon.innerHTML = 'i';
-
-      // Info panel (hidden by default)
       const infoPanel = L.DomUtil.create('div', 'info-panel', container);
       infoPanel.innerHTML = `
           <h3>Map Instructions</h3>
@@ -333,25 +305,24 @@ class LeafletMap {
           </ul>
           <p>Use the layer control to change the base map.</p>
       `;
-
       return container;
     };
-
     vis.infoControl.addTo(vis.map);
   }
 
+  // Update map: rebind circles and reapply selection highlighting
   updateVis() {
     const vis = this;
     const magExtent = d3.extent(vis.data, d => d.mag);
     vis.colorScale.domain(magExtent);
     vis.radiusScale.domain(magExtent);
-
+  
     // Update original colors
     vis.data.forEach(d => {
       vis.originalColors.set(d, vis.colorScale(d.mag));
     });
-
-    // Re-bind circles
+  
+    // Rebind circles
     vis.circles = vis.svg.selectAll('circle')
       .data(vis.data)
       .join('circle')
@@ -391,13 +362,26 @@ class LeafletMap {
           vis.handleEventSelection(d);
         }
       });
-
-    // Update positions
+  
+    // Update positions of circles
     vis.circles
       .attr('cx', d => vis.project(d).x)
       .attr('cy', d => vis.project(d).y);
-
-    // Update the static legend (if needed)
+  
+    // Reapply selection highlighting if a bar selection exists
+    if (vis.selectedQuakes) {
+      vis.svg.selectAll('circle')
+        .attr('stroke', d => (vis.selectedQuakes.includes(d)) ? 'red' : 'black')
+        .attr('stroke-width', d => (vis.selectedQuakes.includes(d)) ? 2 : 1)
+        .attr('opacity', d => (vis.selectedQuakes.includes(d)) ? 1 : 0.5)
+        .attr('fill', d => vis.originalColors.get(d));
+    } else if (vis.selectedEvent) {
+      vis.circles.filter(d => d === vis.selectedEvent)
+        .attr('stroke', 'red')
+        .attr('stroke-width', 2);
+    }
+  
+    // Update static legend
     if (vis.legend) {
       vis.legend.remove();
       vis.legend.onAdd = function(map) {
@@ -417,5 +401,30 @@ class LeafletMap {
       };
       vis.legend.addTo(vis.map);
     }
+  }
+  
+  // Highlight quakes based on a selected bin from the bar chart.
+  // quakeArray is an array of quake objects from the selected bin.
+  highlightQuakes(quakeArray) {
+    const vis = this;
+    
+    // If no quake array is provided, clear any highlight: reset opacity and stroke
+    if (!quakeArray) {
+      vis.selectedQuakes = null;
+      vis.svg.selectAll('circle')
+        .attr('stroke', 'black')
+        .attr('stroke-width', 1)
+        .attr('opacity', 1)
+        .attr('fill', d => vis.originalColors.get(d));
+      return;
+    }
+    
+    vis.selectedQuakes = quakeArray;
+    
+    vis.svg.selectAll('circle')
+      .attr('stroke', d => (vis.selectedQuakes.includes(d)) ? 'red' : 'black')
+      .attr('stroke-width', d => (vis.selectedQuakes.includes(d)) ? 2 : 1)
+      .attr('opacity', d => (vis.selectedQuakes.includes(d)) ? 1 : 0.35)
+      .attr('fill', d => vis.originalColors.get(d));
   }
 }

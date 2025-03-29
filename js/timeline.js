@@ -234,6 +234,44 @@ class Timeline {
       
         // 7) Finally, move the brush to [x0, x1]
         this.brushG.call(this.brush.move, [x0, x1]);
-    }      
+    }
+
+    highlightQuakes(quakeArray) {
+        const vis = this;
+        if (!quakeArray) {
+          // Clear highlighting: reset to default color
+          vis.chartArea.selectAll('.data-point')
+            .attr('fill', 'steelblue')
+            .attr('opacity', 1);
+          return;
+        }
+        
+        const quakeSet = new Set(quakeArray);
+        // For aggregated data, assume each data point d has a 'day' property.
+        vis.chartArea.selectAll('.data-point')
+          .attr('fill', d => {
+            // Check if any quake in quakeSet falls on d.day
+            const dayStart = new Date(d.day);
+            dayStart.setHours(0,0,0,0);
+            const dayEnd = new Date(d.day);
+            dayEnd.setHours(23,59,59,999);
+            const highlighted = Array.from(quakeSet).some(q => {
+              const t = q.time.getTime();
+              return t >= dayStart.getTime() && t <= dayEnd.getTime();
+            });
+            return highlighted ? 'red' : 'steelblue';
+          })
+          .attr('opacity', d => {
+            const dayStart = new Date(d.day);
+            dayStart.setHours(0,0,0,0);
+            const dayEnd = new Date(d.day);
+            dayEnd.setHours(23,59,59,999);
+            const highlighted = Array.from(quakeSet).some(q => {
+              const t = q.time.getTime();
+              return t >= dayStart.getTime() && t <= dayEnd.getTime();
+            });
+            return highlighted ? 1 : 0.5;
+          });
+    }
   }
   

@@ -473,6 +473,15 @@ function updateSlider() {
     .attr('value', 0);
 }
 
+function highlightSelectedQuakes(quakeArray) {
+  if (leafletMap && typeof leafletMap.highlightQuakes === 'function') {
+    leafletMap.highlightQuakes(quakeArray);
+  }
+  if (timeline && typeof timeline.highlightQuakes === 'function') {
+    timeline.highlightQuakes(quakeArray);
+  }
+}
+
 function updateAllVisualizations(data) {
   if (!data || !Array.isArray(data)) {
     console.error('Invalid data passed to updateAllVisualizations');
