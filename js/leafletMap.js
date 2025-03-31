@@ -135,20 +135,29 @@ class LeafletMap {
     // Function to enable/disable brushing
     toggleBrush.on("change", function () {
       if (this.checked) {
-        vis.map.dragging.disable();
-        vis.map.doubleClickZoom.disable();
-        vis.map.scrollWheelZoom.disable();
-
-        //enable brushing
-        vis.brushGroup.call(vis.brush);
+          vis.map.dragging.disable();
+          vis.map.doubleClickZoom.disable();
+          vis.map.scrollWheelZoom.disable();
+  
+          // Enable brushing
+          vis.brushGroup.call(vis.brush);
       } else {
-        vis.map.dragging.enable();
-        vis.map.doubleClickZoom.enable();
-        vis.map.scrollWheelZoom.enable();
-
-        // Clear existing brush selection and disable brushing
-        vis.brushGroup.call(vis.brush.move, null);
-        vis.brushGroup.on(".brush", null);
+          vis.map.dragging.enable();
+          vis.map.doubleClickZoom.enable();
+          vis.map.scrollWheelZoom.enable();
+  
+          // Clear existing selection
+          vis.brushGroup.call(vis.brush.move, null);
+  
+          // Remove the brush overlay
+          vis.brushGroup.selectAll("*").remove();
+          vis.brushGroup.on(".brush", null);
+          
+          // reset selection
+          d3.selectAll("circle").classed("selected", false);
+  
+          // Recreate brush group (to prevent D3 from retaining old state)
+          vis.brushGroup = vis.svg.append("g").attr("class", "brush");
       }
     });
 
