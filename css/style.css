@@ -226,3 +226,48 @@ circle:hover {
   stroke: red;
   stroke-width: 2px;
 }
+
+
+
+
+.dropdown {
+  position: relative;
+  display: inline-block; /* So it sits nicely with other controls */
+  margin-right: 1em; /* Adds space to the right */
+}
+
+.dropbtn {
+  background-color: #f1f1f1;
+  border: 1px solid #ccc;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.dropdown-content {
+  display: none;             /* Hidden by default */
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  min-width: 140px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  padding: 8px;
+  z-index: 999;             /* Ensure it appears on top */
+}
+
+/* Simple hover to show the drop-down. 
+   If you prefer click-to-toggle, remove this and see JS note below. */
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropbtn {
+  background-color: #f1f1f1;
+  border: 1px solid #ccc;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap; /* Prevents line break */
+  display: inline-block; /* Ensures it can size to fit its text */
+}
+

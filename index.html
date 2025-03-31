@@ -29,6 +29,29 @@
       </select>
     </div>
 
+
+
+<!-- Custom drop-down container -->
+<div class="dropdown">
+  <!-- The button that toggles the drop-down -->
+  <button class="dropbtn">Select Magnitudes</button>
+
+  <!-- The hidden panel with checkboxes and an "Apply" button -->
+  <div class="dropdown-content" id="mag-filter-panel">
+    <label><input type="checkbox" value="[3.5,4.0)">3.5 – 4.0</label><br>
+    <label><input type="checkbox" value="[4.0,4.5)">4.0 – 4.5</label><br>
+    <label><input type="checkbox" value="[4.5,5.0)">4.5 – 5.0</label><br>
+    <label><input type="checkbox" value="[5.0,5.5)">5.0 – 5.5</label><br>
+    <label><input type="checkbox" value="[5.5,6.0)">5.5 – 6.0</label><br>
+    <label><input type="checkbox" value="[6.0,99]">6.0+</label><br>
+
+    <button id="apply-mag-filter">Apply Filter</button>
+  </div>
+</div>
+
+
+
+
     <!-- Existing Controls (modified slightly) -->
     <div class="control-row">
       <label for="year-slider">Time Period:</label>

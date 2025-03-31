@@ -35,7 +35,8 @@ let currentMode = 'weekly'; // Default mode
 
 const dispatcher = d3.dispatch('brushRange');
 
-let selectedMagnitudeBins = []; // MODIFIED: Global variable to store current magnitude bins
+let selectedMagnitudeBins = []; // Will store objects {minMag, maxMag, inclusiveMax}
+
 
 // Main initialization function
 async function initialize() {
@@ -95,26 +96,6 @@ function parseRangeString(str) {
     maxMag: +maxStr,
     inclusiveMax: inclusiveMax
   };
-}
-
-// NEW FUNCTION: Reapply magnitude filter (if any) on current time chunk and update visualizations.
-function reapplyFilters() {
-  const baseData = timeChunks[currentIndex].data;
-  // If no magnitude bins are selected, use the full baseData.
-  if (selectedMagnitudeBins.length === 0) {
-    updateAllVisualizations(baseData);
-    return;
-  }
-  const filteredData = baseData.filter(quake => {
-    return selectedMagnitudeBins.some(bin => {
-      if (bin.inclusiveMax) {
-        return quake.mag >= bin.minMag && quake.mag <= bin.maxMag;
-      } else {
-        return quake.mag >= bin.minMag && quake.mag < bin.maxMag;
-      }
-    });
-  });
-  updateAllVisualizations(filteredData);
 }
 
 function updateVisualizationsOnSelection(selectedData) {
@@ -412,21 +393,23 @@ function setupUI() {
       processTimeChunks(currentMode);
     }
 
-    // MODIFIED: Instead of calling updateAllVisualizations with unfiltered data, reapply magnitude filter.
-    reapplyFilters();
+    updateAllVisualizations(timeChunks[currentIndex].data);
     updateDateDisplay();
   });
 
+
+
   // Toggle the magnitude filter drop-down when the dropbtn is clicked.
-  document.querySelector('.dropbtn').addEventListener('click', function() {
-    const panel = document.getElementById('mag-filter-panel');
-    // Toggle display: if hidden or empty, show it; if shown, hide it.
-    if (panel.style.display === 'none' || panel.style.display === '') {
-      panel.style.display = 'block';
-    } else {
-      panel.style.display = 'none';
-    }
-  });
+document.querySelector('.dropbtn').addEventListener('click', function() {
+  const panel = document.getElementById('mag-filter-panel');
+  // Toggle display: if hidden or empty, show it; if shown, hide it.
+  if (panel.style.display === 'none' || panel.style.display === '') {
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+  }
+});
+
 
   // Attach the "Apply Filter" event listener for the magnitude drop-down
   document.getElementById('apply-mag-filter').addEventListener('click', function() {
@@ -441,11 +424,23 @@ function setupUI() {
     console.log("Selected checkboxes count:", checkedBoxes.length);
 
     // Convert each checkbox's value (e.g., "[3.5,4.0)") into an object with numeric bounds
-    selectedMagnitudeBins = Array.from(checkedBoxes).map(box => parseRangeString(box.value));
-    selectedMagnitudeBins.forEach(bin => console.log("Parsed bin:", bin));
+    const bins = Array.from(checkedBoxes).map(box => parseRangeString(box.value));
+    bins.forEach(bin => console.log("Parsed bin:", bin));
 
-    // MODIFIED: Instead of updating visualizations directly here, call reapplyFilters()
-    reapplyFilters();
+    // Filter baseData: keep quake if its mag is in ANY of the selected bins.
+    const filteredData = baseData.filter(quake => {
+      return bins.some(bin => {
+        if (bin.inclusiveMax) {
+          return quake.mag >= bin.minMag && quake.mag <= bin.maxMag;
+        } else {
+          return quake.mag >= bin.minMag && quake.mag < bin.maxMag;
+        }
+      });
+    });
+    console.log("Filtered data count after magnitude filter:", filteredData.length);
+
+    // Now update visualizations with the filtered data.
+    updateAllVisualizations(filteredData);
 
     // Optional: Close the drop-down panel after applying the filter.
     document.getElementById('mag-filter-panel').style.display = 'none';
@@ -470,7 +465,7 @@ function setupUI() {
 
     pauseAnimation();
     processTimeChunks(currentMode, { startDate, endDate });
-    reapplyFilters(); // MODIFIED: Use reapplyFilters here
+    updateAllVisualizations(timeChunks[currentIndex].data);
     updateDateDisplay();
   });
 
@@ -479,8 +474,7 @@ function setupUI() {
     if (!isDataLoaded || timeChunks.length === 0) return;
 
     currentIndex = +this.value;
-    // MODIFIED: Call reapplyFilters() so magnitude filter is applied on slider change
-    reapplyFilters();
+    updateAllVisualizations(timeChunks[currentIndex].data);
     updateDateDisplay();
   });
 
@@ -628,8 +622,6 @@ function playAnimation() {
     }
 
     d3.select('#year-slider').property('value', currentIndex).dispatch('input');
-    // MODIFIED: Reapply magnitude filter on each new time chunk during animation.
-    reapplyFilters();
     updateDateDisplay();
   }, intervalMs);
 }
