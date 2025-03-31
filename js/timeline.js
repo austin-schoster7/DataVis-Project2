@@ -7,7 +7,7 @@ class Timeline {
       };
       this.data = _data;
       this.dispatcher = dispatcher;
-
+      this.selectedDay = null;
       this.internalWidth = 600;
       this.internalHeight = 400;
   
@@ -88,12 +88,13 @@ class Timeline {
         // 1) Group data by day
         const grouped = d3.rollups(
           vis.data,
-          v => v.length,
+          v => v,
           d => +d3.timeDay.floor(new Date(d.time))
         );
         let aggregatedData = grouped.map(([dayNumeric, count]) => ({
           day: new Date(dayNumeric),
-          count
+          quakes: count,
+          count: count.length
         }));
         aggregatedData.sort((a, b) => d3.ascending(a.day, b.day));
       
@@ -159,7 +160,17 @@ class Timeline {
           })
           .on('mouseleave', () => {
             d3.select('#tooltip').style('opacity', 0);
+          })
+          .on('click', (event, d) => {
+            vis.handleDotClick(d, event);
           });
+
+        // If a day is already selected, reapply its highlight
+        if (vis.selectedDay) {
+            vis.chartArea.selectAll('.data-point')
+            .attr('stroke', d => (d.day.getTime() === vis.selectedDay.day.getTime()) ? 'red' : null)
+            .attr('stroke-width', d => (d.day.getTime() === vis.selectedDay.day.getTime()) ? 2 : null);
+        }
     }
   
     brushed(event) {
@@ -238,40 +249,83 @@ class Timeline {
 
     highlightQuakes(quakeArray) {
         const vis = this;
+        
+        // If no selection, reset all dots to default style.
         if (!quakeArray) {
-          // Clear highlighting: reset to default color
           vis.chartArea.selectAll('.data-point')
             .attr('fill', 'steelblue')
-            .attr('opacity', 1);
+            .attr('opacity', 1)
+            .attr('stroke', null)
+            .attr('stroke-width', null);
           return;
         }
         
+        // Create a Set from the selected quakes for fast lookup.
         const quakeSet = new Set(quakeArray);
-        // For aggregated data, assume each data point d has a 'day' property.
+        
+        // For each dot (which represents a day), check if any quake in the selection falls on that day.
         vis.chartArea.selectAll('.data-point')
           .attr('fill', d => {
-            // Check if any quake in quakeSet falls on d.day
+            // Determine the start and end of the day for the datum.
             const dayStart = new Date(d.day);
-            dayStart.setHours(0,0,0,0);
+            dayStart.setHours(0, 0, 0, 0);
             const dayEnd = new Date(d.day);
-            dayEnd.setHours(23,59,59,999);
-            const highlighted = Array.from(quakeSet).some(q => {
-              const t = q.time.getTime();
-              return t >= dayStart.getTime() && t <= dayEnd.getTime();
-            });
-            return highlighted ? 'red' : 'steelblue';
+            dayEnd.setHours(23, 59, 59, 999);
+            // If any quake in the selected set falls within this day, mark it as selected.
+            const isSelected = Array.from(quakeSet).some(q => 
+              q && q.time && (q.time.getTime() >= dayStart.getTime() && q.time.getTime() <= dayEnd.getTime())
+            );
+            return isSelected ? 'orange' : 'steelblue';
           })
           .attr('opacity', d => {
             const dayStart = new Date(d.day);
-            dayStart.setHours(0,0,0,0);
+            dayStart.setHours(0, 0, 0, 0);
             const dayEnd = new Date(d.day);
-            dayEnd.setHours(23,59,59,999);
-            const highlighted = Array.from(quakeSet).some(q => {
-              const t = q.time.getTime();
-              return t >= dayStart.getTime() && t <= dayEnd.getTime();
-            });
-            return highlighted ? 1 : 0.5;
+            dayEnd.setHours(23, 59, 59, 999);
+            const isSelected = Array.from(quakeSet).some(q => 
+              q && q.time && (q.time.getTime() >= dayStart.getTime() && q.time.getTime() <= dayEnd.getTime())
+            );
+            return isSelected ? 1 : 1; // You can adjust unselected opacity if desired
+          })
+          .each(function(d) {
+            const dayStart = new Date(d.day);
+            dayStart.setHours(0, 0, 0, 0);
+            const dayEnd = new Date(d.day);
+            dayEnd.setHours(23, 59, 59, 999);
+            const isSelected = Array.from(quakeSet).some(q => 
+              q && q.time && (q.time.getTime() >= dayStart.getTime() && q.time.getTime() <= dayEnd.getTime())
+            );
+            // Bring the selected dot(s) to the front.
+            if (isSelected) {
+              d3.select(this).raise();
+            }
           });
     }
-  }
+
+    // When a timeline dot is clicked, toggle selection for that day.
+    handleDotClick(d, event) {
+        const vis = this;
+        // If the same day is already selected, deselect it.
+        if (vis.selectedDay && vis.selectedDay.day.getTime() === d.day.getTime()) {
+            vis.selectedDay = null;
+            vis.chartArea.selectAll('.data-point')
+                .attr('stroke', null)
+                .attr('stroke-width', null);
+            // Call a global function to clear linked selection (in map, bar chart)
+            highlightSelectedQuakes(null);
+        } 
+        else {
+            vis.selectedDay = d;
+            // Highlight the selected dot (e.g., add a red outline)
+            vis.chartArea.selectAll('.data-point')
+                .attr('stroke', null)
+                .attr('stroke-width', null);
+            d3.select(event.currentTarget)
+                .attr('stroke', 'red')
+                .attr('stroke-width', 2);
+            // Call a global function to update linked selections with all quakes for that day.
+            highlightSelectedQuakes(d.quakes);
+        }
+    }
+}
   
