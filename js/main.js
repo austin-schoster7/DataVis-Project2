@@ -150,7 +150,7 @@ function loadDataForYear(year) {
         latitude: +d.latitude,
         longitude: +d.longitude,
         mag: +d.mag,
-        depth: +d.depth,
+        depth: +d.depth <= 0 ? 0 : +d.depth,
         time: new Date(d.time),
         place: d.place
       };
