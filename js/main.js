@@ -184,7 +184,7 @@ function loadDataForYear(year) {
         latitude: +d.latitude,
         longitude: +d.longitude,
         mag: +d.mag,
-        depth: +d.depth,
+        depth: +d.depth <= 0 ? 0 : +d.depth,
         time: new Date(d.time),
         place: d.place
       };
@@ -286,6 +286,12 @@ function processMonthlyChunks() {
           endDate: new Date(monthEnd),
           data: monthData
         });
+        timeChunksTimeline.push({
+          year: year,
+          startDate: new Date(currentMonthStart),
+          endDate: new Date(monthEnd),
+          data: monthData
+        });
       }
 
       currentMonthStart = new Date(monthEnd);
@@ -307,6 +313,12 @@ function processYearlyChunks() {
 
     if (yearDataFiltered.length > 0) {
       timeChunks.push({
+        year: year,
+        startDate: new Date(minDate),
+        endDate: new Date(maxDate),
+        data: yearDataFiltered
+      });
+      timeChunksTimeline.push({
         year: year,
         startDate: new Date(minDate),
         endDate: new Date(maxDate),
@@ -348,6 +360,12 @@ function processCustomRangeChunks(range) {
         endDate: new Date(weekEnd),
         data: weekData
       });
+      timeChunksTimeline.push({
+        year: currentWeekStart.getFullYear(),
+        startDate: new Date(currentWeekStart),
+        endDate: new Date(weekEnd),
+        data: weekData
+      });
     }
 
     currentWeekStart = new Date(weekEnd);
@@ -367,6 +385,12 @@ function processStaticRange(range) {
 
   if (rangeData.length > 0) {
     timeChunks = [{
+      year: `${startDate.getFullYear()}-${endDate.getFullYear()}`,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      data: rangeData
+    }];
+    timeChunksTimeline = [{
       year: `${startDate.getFullYear()}-${endDate.getFullYear()}`,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
@@ -543,6 +567,15 @@ function updateSlider() {
     .attr('value', 0);
 }
 
+function highlightSelectedQuakes(quakeArray) {
+  if (leafletMap && typeof leafletMap.highlightQuakes === 'function') {
+    leafletMap.highlightQuakes(quakeArray);
+  }
+  if (timeline && typeof timeline.highlightQuakes === 'function') {
+    timeline.highlightQuakes(quakeArray);
+  }
+}
+
 function updateAllVisualizations(data) {
   if (!data || !Array.isArray(data)) {
     console.error('Invalid data passed to updateAllVisualizations');
@@ -551,7 +584,7 @@ function updateAllVisualizations(data) {
 
   // Get the current chunk
   const currentChunk = timeChunks[currentIndex];
-  const currentChunkTimeline = timeChunksTimeline[currentIndex];
+  const currentChunkTimeline = timeChunksTimeline[currentIndex] || currentChunk;
 
   // 1) Timeline: use the full data from the chunk.
   // Also, pass the chunk’s endDate so the timeline can extend its domain by 1 day.
