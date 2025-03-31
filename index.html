@@ -29,28 +29,23 @@
       </select>
     </div>
 
+    <!-- Custom drop-down container -->
+    <div class="dropdown">
+        <!-- The button that toggles the drop-down -->
+        <button class="dropbtn">Select Magnitudes</button>
 
+        <!-- The hidden panel with checkboxes and an "Apply" button -->
+        <div class="dropdown-content" id="mag-filter-panel">
+            <label><input type="checkbox" value="[3.5,4.0)">3.5 – 4.0</label><br>
+            <label><input type="checkbox" value="[4.0,4.5)">4.0 – 4.5</label><br>
+            <label><input type="checkbox" value="[4.5,5.0)">4.5 – 5.0</label><br>
+            <label><input type="checkbox" value="[5.0,5.5)">5.0 – 5.5</label><br>
+            <label><input type="checkbox" value="[5.5,6.0)">5.5 – 6.0</label><br>
+            <label><input type="checkbox" value="[6.0,99]">6.0+</label><br>
 
-<!-- Custom drop-down container -->
-<div class="dropdown">
-  <!-- The button that toggles the drop-down -->
-  <button class="dropbtn">Select Magnitudes</button>
-
-  <!-- The hidden panel with checkboxes and an "Apply" button -->
-  <div class="dropdown-content" id="mag-filter-panel">
-    <label><input type="checkbox" value="[3.5,4.0)">3.5 – 4.0</label><br>
-    <label><input type="checkbox" value="[4.0,4.5)">4.0 – 4.5</label><br>
-    <label><input type="checkbox" value="[4.5,5.0)">4.5 – 5.0</label><br>
-    <label><input type="checkbox" value="[5.0,5.5)">5.0 – 5.5</label><br>
-    <label><input type="checkbox" value="[5.5,6.0)">5.5 – 6.0</label><br>
-    <label><input type="checkbox" value="[6.0,99]">6.0+</label><br>
-
-    <button id="apply-mag-filter">Apply Filter</button>
-  </div>
-</div>
-
-
-
+            <button id="apply-mag-filter">Apply Filter</button>
+        </div>
+    </div>
 
     <!-- Existing Controls (modified slightly) -->
     <div class="control-row">
@@ -69,12 +64,11 @@
       <label class="checkbox-label">
         <input type="checkbox" id="loop-checkbox"> Loop
       </label>
-      <label>
-        <input type="checkbox" id="toggleBrush"> Enable Brush Selection
-      </label>
     </div>
 
-    <!-- New Date Range Controls (hidden by default) -->
+    <button id="clear-filters">Clear All Filters</button>
+
+    <!-- Date Range Controls (hidden by default) -->
     <div class="control-row" id="custom-range-controls" style="display: none;">
       <label for="start-date">From:</label>
       <input type="date" id="start-date" min="2004-01-01" max="2024-12-31">
@@ -85,31 +79,29 @@
       <button id="apply-range">Apply</button>
     </div>
 
-    <!--<div class="control-row" id="static-range-controls" style="display: none;">
-      <label for="static-start-date">From:</label>
-      <input type="date" id="static-start-date" min="2004-01-01" max="2024-12-31">
 
-      <label for="static-end-date">To:</label>
-      <input type="date" id="static-end-date" min="2004-01-01" max="2024-12-31">
-
-      <button id="apply-static-range">Show</button>
-    </div> -->
-
-    <!-- Existing Date Display and Loading Message -->
-    <div id="current-date-display" class="date-display"></div>
-    <div id="loading-message" style="display: none;">Loading earthquake data...</div>
   </div>
+
+      <!-- Existing Date Display and Loading Message -->
+      <div id="current-date-display" class="date-display"></div>
+      <div id="loading-message" style="display: none;">Loading earthquake data...</div>
 
   <div id="visualizations">
     <!-- Left: Large map container -->
     <div id="map-container">
-        <select id="attribute-dropdown-map">
+        <div id="map-controls">
+          <select id="attribute-dropdown-map">
             <option value="mag">Magnitude</option>
             <option value="depth">Depth</option>
-        </select>
+          </select>
           
+          <label id="brush-label">
+            <input type="checkbox" id="toggleBrush"> Enable Brush
+          </label>
+        </div>
+      
         <div id="my-map"></div>
-    </div>
+    </div>      
 
     <!-- Right: Two stacked visualizations: timeline (top), bar chart (bottom) -->
     <div id="side-container">

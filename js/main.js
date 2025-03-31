@@ -677,10 +677,42 @@ function pauseAnimation() {
   d3.select('#pause-button').attr('disabled', true);
 }
 
+function clearAllFilters() {
+  // Clear timeline brush
+  if (timeline && timeline.brushG && timeline.brush) {
+    timeline.brushG.call(timeline.brush.move, null);
+  }
+  
+  // Clear map brush
+  if (leafletMap && leafletMap.brushGroup && leafletMap.brush) {
+    leafletMap.brushGroup.call(leafletMap.brush.move, null);
+  }
+  
+  // Reset map selection
+  if (leafletMap && typeof leafletMap.resetEventHighlights === 'function') {
+    leafletMap.resetEventHighlights();
+  }
+  
+  // Reset bar chart selection
+  if (magChart && typeof magChart.resetSelections === 'function') {
+    magChart.resetSelections();
+  } else if (magChart && typeof magChart.updateVis === 'function') {
+    magChart.updateVis();
+  }
+  
+  // Clear any cross-view linking
+  updateLinkedSelections(null);
+  
+  // (Optional) Uncheck any other filters if necessary
+  d3.selectAll('#mag-filter-panel input[type="checkbox"]').property('checked', false);
+}
+
 d3.select('#attribute-dropdown-map').on('change', function() {
   const newAttr = d3.select(this).property('value');
   leafletMap.setAttribute(newAttr);
 });
+
+d3.select('#clear-filters').on('click', clearAllFilters);
 
 // Start the application
 initialize();
