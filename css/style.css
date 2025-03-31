@@ -227,9 +227,6 @@ circle:hover {
   stroke-width: 2px;
 }
 
-
-
-
 .dropdown {
   position: relative;
   display: inline-block; /* So it sits nicely with other controls */
@@ -271,3 +268,15 @@ circle:hover {
   display: inline-block; /* Ensures it can size to fit its text */
 }
 
+#attribute-dropdown-map {
+  position: absolute;
+  top: 10px;
+  right: 75px;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 5px;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+}

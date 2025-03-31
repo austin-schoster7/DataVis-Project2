@@ -11,6 +11,7 @@ class LeafletMap {
     this.selectedEvent = null;   // from map clicks
     this.selectedQuakes = null;  // from bar chart selection (an array)
     this.originalColors = new Map();
+    this.currentAttribute = "mag";
     this.initVis();
   }
 
@@ -61,17 +62,29 @@ class LeafletMap {
     vis.svg = vis.overlay.select('svg').attr('pointer-events', 'auto');
 
     // (5) Create scales for quake circles
-    const magExtent = d3.extent(vis.data, d => d.mag);
-    vis.colorScale = d3.scaleSequential(d3.interpolateReds).domain(magExtent);
-    vis.radiusScale = d3.scaleLinear().domain(magExtent).range([2, 10]);
+    // Use current attribute to set the scales:
+    if (vis.currentAttribute === "depth") {
+      const depthExtent = d3.extent(vis.data, d => d.depth);
+      vis.colorScale = d3.scaleSequential(d3.interpolateBlues).domain(depthExtent);
+      vis.radiusScale = d3.scaleLinear().domain(depthExtent).range([2, 10]);
+    } 
+    else {
+      const magExtent = d3.extent(vis.data, d => d.mag);
+      vis.colorScale = d3.scaleSequential(d3.interpolateReds).domain(magExtent);
+      vis.radiusScale = d3.scaleLinear().domain(magExtent).range([2, 10]);
+    }
 
     // (6) Plot quake circles with click handler for selection
     vis.circles = vis.svg.selectAll('circle')
       .data(vis.data)
       .join('circle')
       .attr('stroke', 'black')
-      .attr('fill', d => vis.colorScale(d.mag))
-      .attr('r', d => vis.radiusScale(d.mag))
+      .attr('fill', d => {
+        return vis.currentAttribute === "depth" ? vis.colorScale(d.depth) : vis.colorScale(d.mag);
+      })
+      .attr('r', d => {
+        return vis.currentAttribute === "depth" ? vis.radiusScale(d.depth) : vis.radiusScale(d.mag);
+      })
       .attr('cx', d => vis.project(d).x)
       .attr('cy', d => vis.project(d).y)
       .on('mouseover', (event, d) => {
@@ -79,8 +92,8 @@ class LeafletMap {
           .style('opacity', 1)
           .html(`
             <b>Location:</b> ${d.place || 'Unknown'}<br>
-            <b>Magnitude:</b> ${d.mag}<br>
-            <b>Depth:</b> ${d.depth} km <br>
+            <b>${vis.currentAttribute === "depth" ? "Depth" : "Magnitude"}:</b> ${vis.currentAttribute === "depth" ? d.depth : d.mag}<br>
+            <b>Depth:</b> ${d.depth} km<br>
             <b>Date/Time:</b> ${d.time.toLocaleDateString()} ${d.time.toLocaleTimeString()}<br>
           `);
       })
@@ -103,7 +116,7 @@ class LeafletMap {
       vis.originalColors.set(d, vis.colorScale(d.mag));
     });
 
-    // (8) Set up a brush group (if needed; not directly used in our selection scenario)
+    // (8) Set up a brush group
     vis.brushGroup = vis.svg.append("g").attr("class", "brush");
     vis.brush = d3.brush()
       .extent([[0, 0], [vis.svg.node().clientWidth, vis.svg.node().clientHeight]])
@@ -161,14 +174,24 @@ class LeafletMap {
       }
     });
 
-    // (8) Create the static magnitude legend (if needed)
+    // (9) Create the static legend
     vis.legend = L.control({ position: 'bottomright' });
     vis.legend.onAdd = function(map) {
       const div = L.DomUtil.create('div', 'info legend');
-      const [minMag, maxMag] = magExtent;
-      const breaks = d3.ticks(minMag, maxMag, 6);
+      // Set the title based on the current attribute
+      const title = vis.currentAttribute === "depth" ? "Depth (km)" : "Magnitude";
+      // Insert the title at the top of the legend
+      div.innerHTML = `<strong>${title}</strong><br>`;
+      let extent, breaks;
+      if (vis.currentAttribute === "depth") {
+        extent = d3.extent(vis.data, d => d.depth);
+        breaks = d3.ticks(extent[0], extent[1], 6);
+      } else {
+        extent = d3.extent(vis.data, d => d.mag);
+        breaks = d3.ticks(extent[0], extent[1], 6);
+      }
       breaks.forEach((b, i) => {
-        const color = vis.colorScale(b);
+        const color = vis.currentAttribute === "depth" ? vis.colorScale(b) : vis.colorScale(b);
         const nextVal = breaks[i + 1];
         if (i < breaks.length - 1) {
           div.innerHTML += `<i style="background:${color}"></i>${b.toFixed(1)} &ndash; ${nextVal.toFixed(1)}<br>`;
@@ -185,6 +208,12 @@ class LeafletMap {
 
     // (11) Update positions on zoom/pan
     vis.map.on('zoomend moveend', () => vis.updateVis());
+  }
+
+  // Set the current attribute and update the map
+  setAttribute(attr) {
+    this.currentAttribute = attr;
+    this.updateVis(); // re-draw with new scales
   }
 
   // Helper: convert lat/lng to x/y
@@ -322,13 +351,22 @@ class LeafletMap {
   // Update map: rebind circles and reapply selection highlighting
   updateVis() {
     const vis = this;
-    const magExtent = d3.extent(vis.data, d => d.mag);
-    vis.colorScale.domain(magExtent);
-    vis.radiusScale.domain(magExtent);
-  
-    // Update original colors
+
+    let extent;
+    if (vis.currentAttribute === "depth") {
+      extent = d3.extent(vis.data, d => d.depth);
+      vis.colorScale = d3.scaleSequential(d3.interpolateBlues).domain(extent);
+      vis.radiusScale = d3.scaleLinear().domain(extent).range([2, 10]);
+    } 
+    else {
+      extent = d3.extent(vis.data, d => d.mag);
+      vis.colorScale = d3.scaleSequential(d3.interpolateReds).domain(extent);
+      vis.radiusScale = d3.scaleLinear().domain(extent).range([2, 10]);
+    }
+
+    // Re-store original color for each quake based on the new attribute
     vis.data.forEach(d => {
-      vis.originalColors.set(d, vis.colorScale(d.mag));
+      vis.originalColors.set(d, vis.colorScale(d[vis.currentAttribute]));
     });
   
     // Rebind circles
@@ -345,9 +383,9 @@ class LeafletMap {
           if (d === vis.selectedEvent) return 'yellow';
           if (Math.abs(diff) <= dayInMs) return diff < 0 ? '#4CAF50' : '#2196F3';
         }
-        return vis.colorScale(d.mag);
+        return vis.colorScale(d[vis.currentAttribute]);
       })
-      .attr('r', d => vis.radiusScale(d.mag))
+      .attr('r', d => vis.radiusScale(d[vis.currentAttribute]))
       .on('mouseover', (event, d) => {
         d3.select('#tooltip')
           .style('opacity', 1)
@@ -390,13 +428,17 @@ class LeafletMap {
         .attr('stroke-width', 2);
     }
   
-    // Update static legend
+    // Update legend
     if (vis.legend) {
       vis.legend.remove();
       vis.legend.onAdd = function(map) {
         const div = L.DomUtil.create('div', 'info legend');
-        const [minMag, maxMag] = magExtent;
-        const breaks = d3.ticks(minMag, maxMag, 6);
+        // Set the title based on the current attribute
+        const title = vis.currentAttribute === "depth" ? "Depth (km)" : "Magnitude";
+        // Insert the title at the top of the legend
+        div.innerHTML = `<strong>${title}</strong><br>`;
+        const domainExtent = d3.extent(vis.data, d => d[vis.currentAttribute]);
+        const breaks = d3.ticks(domainExtent[0], domainExtent[1], 6);
         breaks.forEach((b, i) => {
           const color = vis.colorScale(b);
           const nextVal = breaks[i + 1];

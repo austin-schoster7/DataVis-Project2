@@ -70,7 +70,7 @@ class MagnitudeChart {
         .attr('x', -vis.height / 2)
         .attr('y', -35)
         .style('text-anchor', 'middle')
-        .text('Count');
+        .text('Quakes');
   
       // Title
       vis.title = vis.chartArea.append('text')

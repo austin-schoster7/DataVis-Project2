@@ -59,7 +59,7 @@ class Timeline {
         .attr('x', -vis.height / 2)
         .attr('y', -35)
         .style('text-anchor', 'middle')
-        .text('Magnitude');
+        .text('Quakes');
   
       // Title
       vis.title = vis.chartArea.append('text')

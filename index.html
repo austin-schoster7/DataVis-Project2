@@ -103,7 +103,12 @@
   <div id="visualizations">
     <!-- Left: Large map container -->
     <div id="map-container">
-      <div id="my-map"></div>
+        <select id="attribute-dropdown-map">
+            <option value="mag">Magnitude</option>
+            <option value="depth">Depth</option>
+        </select>
+          
+        <div id="my-map"></div>
     </div>
 
     <!-- Right: Two stacked visualizations: timeline (top), bar chart (bottom) -->

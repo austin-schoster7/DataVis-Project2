@@ -97,7 +97,7 @@ function parseRangeString(str) {
   };
 }
 
-// NEW FUNCTION: Reapply magnitude filter (if any) on current time chunk and update visualizations.
+// Reapply magnitude filter (if any) on current time chunk and update visualizations.
 function reapplyFilters() {
   const baseData = timeChunks[currentIndex].data;
   // If no magnitude bins are selected, use the full baseData.
@@ -676,6 +676,11 @@ function pauseAnimation() {
   d3.select('#play-button').attr('disabled', null);
   d3.select('#pause-button').attr('disabled', true);
 }
+
+d3.select('#attribute-dropdown-map').on('change', function() {
+  const newAttr = d3.select(this).property('value');
+  leafletMap.setAttribute(newAttr);
+});
 
 // Start the application
 initialize();
