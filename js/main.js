@@ -588,6 +588,10 @@ function updateAllVisualizations(data) {
     return;
   }
 
+  if (leafletMap && typeof leafletMap.resetEventHighlights === 'function') {
+    leafletMap.resetEventHighlights();
+  }
+
   // Get the current chunk
   const currentChunk = timeChunks[currentIndex];
   const currentChunkTimeline = timeChunksTimeline[currentIndex] || currentChunk;

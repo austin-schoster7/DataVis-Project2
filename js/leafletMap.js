@@ -488,8 +488,8 @@ class LeafletMap {
     vis.selectedQuakes = quakeArray;
     
     vis.svg.selectAll('circle')
-      .attr('stroke', d => (vis.selectedQuakes.includes(d)) ? 'red' : 'black')
-      .attr('stroke-width', d => (vis.selectedQuakes.includes(d)) ? 2 : 1)
+      // .attr('stroke', d => (vis.selectedQuakes.includes(d)) ? 'red' : 'black')
+      // .attr('stroke-width', d => (vis.selectedQuakes.includes(d)) ? 2 : 1)
       // For selected circles, display them; for others, hide them.
       .style('display', d => (vis.selectedQuakes.includes(d)) ? 'block' : 'none')
       .attr('fill', d => vis.originalColors.get(d));
