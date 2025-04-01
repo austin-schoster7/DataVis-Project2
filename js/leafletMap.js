@@ -119,29 +119,44 @@ class LeafletMap {
     // (8) Set up a brush group
     vis.brushGroup = vis.svg.append("g").attr("class", "brush");
     vis.brush = d3.brush()
-      .extent([[0, 0], [vis.svg.node().clientWidth, vis.svg.node().clientHeight]])
-      .on("start", () => d3.selectAll("circle").classed("selected", false))
-      .on("brush", ({ selection }) => {
-        if (!selection) return;
-        const [[x0, y0], [x1, y1]] = selection;
-        vis.circles.classed("selected", d => {
-          const x = vis.project(d).x;
-          const y = vis.project(d).y;
-          return x0 <= x && x <= x1 && y0 <= y && y <= y1;
-        });
-        const selectedData = vis.data.filter(d => {
-          const projected = vis.project(d);
-          return x0 <= projected.x && projected.x <= x1 && y0 <= projected.y && projected.y <= y1;
-        });
-        updateVisualizationsOnSelection(selectedData);
-      })
-      .on("end", ({ selection }) => {
-        if (!selection) {
-          d3.selectAll("circle").classed("selected", false);
-          updateVisualizationsOnSelection(timeChunks[currentIndex].data);
-        }
+    .extent([[0, 0], [vis.svg.node().clientWidth, vis.svg.node().clientHeight]])
+    .on("start", () => {
+      // Clear any previous selection and reset opacity to full
+      d3.selectAll("circle")
+        .classed("selected", false)
+        .attr("opacity", 1);
+    })
+    .on("brush", ({ selection }) => {
+      if (!selection) return;
+      const [[x0, y0], [x1, y1]] = selection;
+      
+      // Mark circles as selected if they fall in the brush.
+      vis.circles.classed("selected", d => {
+        const p = vis.project(d);
+        return x0 <= p.x && p.x <= x1 && y0 <= p.y && p.y <= y1;
       });
-    
+      
+      // Set opacity: selected dots get full opacity; others become faded.
+      vis.circles.attr("opacity", d => {
+        const p = vis.project(d);
+        return (x0 <= p.x && p.x <= x1 && y0 <= p.y && p.y <= y1) ? 1 : 0.4;
+      });
+      
+      const selectedData = vis.data.filter(d => {
+        const projected = vis.project(d);
+        return x0 <= projected.x && projected.x <= x1 && y0 <= projected.y && projected.y <= y1;
+      });
+      updateVisualizationsOnSelection(selectedData);
+    })
+    .on("end", ({ selection }) => {
+      if (!selection) {
+        // If brush is cleared, reset all circles to full opacity.
+        d3.selectAll("circle")
+          .classed("selected", false)
+          .attr("opacity", 1);
+        updateVisualizationsOnSelection(timeChunks[currentIndex].data);
+      }
+    });
 
     const toggleBrush = d3.select("#toggleBrush");
 
@@ -459,14 +474,14 @@ class LeafletMap {
   highlightQuakes(quakeArray) {
     const vis = this;
     
-    // If no quake array is provided, clear any highlight: reset opacity and stroke
+    // If no selection, reset all circles to be visible
     if (!quakeArray) {
       vis.selectedQuakes = null;
       vis.svg.selectAll('circle')
         .attr('stroke', 'black')
         .attr('stroke-width', 1)
-        .attr('opacity', 1)
-        .attr('fill', d => vis.originalColors.get(d));
+        .attr('fill', d => vis.originalColors.get(d))
+        .style('display', 'block');  // make all visible
       return;
     }
     
@@ -475,7 +490,8 @@ class LeafletMap {
     vis.svg.selectAll('circle')
       .attr('stroke', d => (vis.selectedQuakes.includes(d)) ? 'red' : 'black')
       .attr('stroke-width', d => (vis.selectedQuakes.includes(d)) ? 2 : 1)
-      .attr('opacity', d => (vis.selectedQuakes.includes(d)) ? 1 : 0.35)
+      // For selected circles, display them; for others, hide them.
+      .style('display', d => (vis.selectedQuakes.includes(d)) ? 'block' : 'none')
       .attr('fill', d => vis.originalColors.get(d));
-  }
+  }  
 }

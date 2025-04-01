@@ -163,12 +163,23 @@ function updateMapAndChart(data) {
   // so it always shows the complete aggregated view.
 }
 
-function updateLinkedSelections(selectedEvent) {
+function updateLinkedSelections(selected) {
+  if (leafletMap && typeof leafletMap.highlightQuakes === 'function') {
+    // If the selection is an array (e.g. from a bar chart), then update the map.
+    if (Array.isArray(selected)) {
+      leafletMap.highlightQuakes(selected);
+    } else if (!selected) {
+      // Clear map highlights when selection is cleared.
+      leafletMap.highlightQuakes(null);
+    }
+    // If selected is a single event from a map click, do nothing so that 
+    // the neighbor highlighting logic in handleEventSelection remains intact.
+  }
   if (timeline && typeof timeline.highlightSelection === 'function') {
-    timeline.highlightSelection(selectedEvent);
+    timeline.highlightSelection(selected);
   }
   if (magChart && typeof magChart.highlightSelection === 'function') {
-    magChart.highlightSelection(selectedEvent);
+    magChart.highlightSelection(selected);
   }
 }
 
