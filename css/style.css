@@ -287,7 +287,6 @@ circle:hover {
   display: inline-block;
   font-family: sans-serif;
 }
-
 .dropbtn:hover {
   background-color: #68b3de;
   transition: background-color 0.2s;
@@ -305,9 +304,12 @@ circle:hover {
   z-index: 999;
   /* Ensure it appears on top */
 }
-
 .dropdown:hover .dropdown-content {
   display: block;
+}
+
+#apply-mag-filter {
+  cursor: pointer;
 }
 
 #clear-filters {
@@ -349,7 +351,6 @@ circle:hover {
 
 #apply-range {
   background-color: #9dd1ef;
-
   color: black;
   border: none;
   padding: 5px 10px;
@@ -360,6 +361,10 @@ circle:hover {
   margin: 4px 2px;
   cursor: pointer;
   border-radius: 4px;
+}
+#apply-range:hover {
+  background-color: #68b3de;
+  transition: background-color 0.2s;
 }
 
 #pause-button {
