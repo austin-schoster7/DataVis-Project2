@@ -50,7 +50,8 @@ circle:hover {
   position: absolute;
   top: 12px;
   right: 150px;
-  z-index: 1100; /* Above the map so it’s clickable */
+  z-index: 1100;
+  /* Above the map so it’s clickable */
   display: flex;
   align-items: center;
   gap: 10px;
@@ -62,7 +63,8 @@ circle:hover {
 
 /* Remove absolute from #attribute-dropdown-map so it sits inside #map-controls */
 #attribute-dropdown-map {
-  position: static; /* or remove the old absolute lines entirely */
+  position: static;
+  /* or remove the old absolute lines entirely */
   margin: 0;
   padding: 5px 8px;
   font-size: 0.9rem;
@@ -268,8 +270,10 @@ circle:hover {
 
 .dropdown {
   position: relative;
-  display: inline-block; /* So it sits nicely with other controls */
-  margin-right: 1em; /* Adds space to the right */
+  display: inline-block;
+  /* So it sits nicely with other controls */
+  margin-right: 1em;
+  /* Adds space to the right */
 }
 
 .dropbtn {
@@ -283,21 +287,25 @@ circle:hover {
   display: inline-block;
   font-family: sans-serif;
 }
+
 .dropbtn:hover {
   background-color: #68b3de;
   transition: background-color 0.2s;
 }
 
 .dropdown-content {
-  display: none;             /* Hidden by default */
+  display: none;
+  /* Hidden by default */
   position: absolute;
   background-color: #fff;
   border: 1px solid #ccc;
   min-width: 140px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   padding: 8px;
-  z-index: 999;             /* Ensure it appears on top */
+  z-index: 999;
+  /* Ensure it appears on top */
 }
+
 .dropdown:hover .dropdown-content {
   display: block;
 }
@@ -314,6 +322,7 @@ circle:hover {
   cursor: pointer;
   color: white;
 }
+
 #clear-filters:hover {
   background-color: #e53935;
   transition: background-color 0.2s;
@@ -332,9 +341,25 @@ circle:hover {
   cursor: pointer;
   border-radius: 4px;
 }
+
 #play-button:hover {
   background-color: #45a049;
   transition: background-color 0.2s;
+}
+
+#apply-range {
+  background-color: #9dd1ef;
+
+  color: black;
+  border: none;
+  padding: 5px 10px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 0.9rem;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 4px;
 }
 
 #pause-button {
@@ -350,12 +375,14 @@ circle:hover {
   cursor: pointer;
   border-radius: 4px;
 }
+
 #pause-button:hover {
   background-color: #9e9e9e;
   transition: background-color 0.2s;
 }
 
-#current-date-display, #loading-message {
+#current-date-display,
+#loading-message {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -365,4 +392,16 @@ circle:hover {
   font-family: sans-serif;
   justify-content: center;
   font-size: 20px;
+}
+
+#start-date,
+#end-date {
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+#start-date-label,
+#end-date-label {
+  display: flex;
+  align-items: center;
 }

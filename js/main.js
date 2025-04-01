@@ -65,7 +65,7 @@ async function initialize() {
       timeChunks[currentIndex].data,
       updateVisualizationsOnSelection
     );
-    
+
     timeline = new Timeline({ parentElement: '#timeline' }, timeChunksTimeline[currentIndex].data, dispatcher);
     magChart = new MagnitudeChart({ parentElement: '#mag-chart' }, timeChunks[currentIndex].data);
 
@@ -437,11 +437,6 @@ function setupUI() {
       const startDate = new Date(d3.select('#start-date').property('value'));
       const endDate = new Date(d3.select('#end-date').property('value'));
 
-      if (isNaN(startDate) || isNaN(endDate)) {
-        alert('Please select valid dates');
-        return;
-      }
-
       processTimeChunks(currentMode, { startDate, endDate });
     } else {
       processTimeChunks(currentMode);
@@ -453,7 +448,7 @@ function setupUI() {
   });
 
   // Toggle the magnitude filter drop-down when the dropbtn is clicked.
-  document.querySelector('.dropbtn').addEventListener('click', function() {
+  document.querySelector('.dropbtn').addEventListener('click', function () {
     const panel = document.getElementById('mag-filter-panel');
     // Toggle display: if hidden or empty, show it; if shown, hide it.
     if (panel.style.display === 'none' || panel.style.display === '') {
@@ -464,7 +459,7 @@ function setupUI() {
   });
 
   // Attach the "Apply Filter" event listener for the magnitude drop-down
-  document.getElementById('apply-mag-filter').addEventListener('click', function() {
+  document.getElementById('apply-mag-filter').addEventListener('click', function () {
     console.log("Apply Filter button clicked");
 
     // Get the base data from the current time chunk
@@ -605,7 +600,7 @@ function updateAllVisualizations(data) {
 
   // 2) Map and bar chart: filter out events that occur on or after the chunk's end date.
   const filteredData = data.filter(d => d.time < currentChunk.endDate);
-  
+
   leafletMap.data = filteredData;
   leafletMap.updateVis();
 
@@ -693,32 +688,32 @@ function clearAllFilters() {
   if (timeline && timeline.brushG && timeline.brush) {
     timeline.brushG.call(timeline.brush.move, null);
   }
-  
+
   // Clear map brush
   if (leafletMap && leafletMap.brushGroup && leafletMap.brush) {
     leafletMap.brushGroup.call(leafletMap.brush.move, null);
   }
-  
+
   // Reset map selection
   if (leafletMap && typeof leafletMap.resetEventHighlights === 'function') {
     leafletMap.resetEventHighlights();
   }
-  
+
   // Reset bar chart selection
   if (magChart && typeof magChart.resetSelections === 'function') {
     magChart.resetSelections();
   } else if (magChart && typeof magChart.updateVis === 'function') {
     magChart.updateVis();
   }
-  
+
   // Clear any cross-view linking
   updateLinkedSelections(null);
-  
+
   // (Optional) Uncheck any other filters if necessary
   d3.selectAll('#mag-filter-panel input[type="checkbox"]').property('checked', false);
 }
 
-d3.select('#attribute-dropdown-map').on('change', function() {
+d3.select('#attribute-dropdown-map').on('change', function () {
   const newAttr = d3.select(this).property('value');
   leafletMap.setAttribute(newAttr);
 });
